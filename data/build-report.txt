@@ -1,4 +1,4 @@
-Built 2026-11-02T21:35:46.954Z from local CSV files in /home/claude/work
+Built 2026-11-02T22:02:19.354Z from CSV exports in work
 Published 2265 incidents through 2026-10-30.
 
 Things to check in the sheet (27):

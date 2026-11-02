@@ -1,7 +1,7 @@
 /**
  * normalize.js: turns raw sheet rows into clean incident objects.
  *
- * Used by tools/build-data.mjs (the Friday update, in Node). It has no
+ * Used by tools/build-data.mjs (the data refresh, in Node). It has no
  * browser or Node dependencies, so it could also run in the page if the site
  * ever reads the sheet directly.
  *

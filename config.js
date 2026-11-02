@@ -6,38 +6,38 @@
  * reads from here.
  *
  * It is plain JavaScript (not JSON) so that it can carry comments, and it is
- * read both by the browser and by tools/build-data.mjs (the Friday update).
+ * read both by the browser and by tools/build-data.mjs (the data refresh).
  */
 export const CONFIG = {
   /* ================================================================ DATA */
 
-  // The Google Sheet the analysts work in through the week.
+  // The spreadsheet the analysts work in. The site is static: the data is
+  // refreshed by hand from CSV exports of these three tabs (see
+  // tools/build-data.mjs). Only "Incidents - Global" feeds the GSI; the other
+  // two only feed the Type/Category filters. If the tabs are renamed (e.g.
+  // when the sheet moves to Excel), change the names here.
   sheet: {
-    id: "1551OjsZ-qlmha8ZwbB9kz8w3dUzGc4n2pPecBkMebv0",
-    // Tabs read by the Friday update (tools/build-data.mjs). The gid is the
-    // number after "gid=" in the tab's URL. Only "Incidents - Global" feeds
-    // the GSI; the other two only feed the Type/Category filters.
     tabs: {
-      incidents: { name: "Incidents - Global", gid: 6486164 },
-      types: { name: "Incidents - Type", gid: 1935305483 },
-      categories: { name: "Incidents - Category Mapping", gid: 201260984 }
+      incidents: { name: "Incidents - Global" },
+      types: { name: "Incidents - Type" },
+      categories: { name: "Incidents - Category Mapping" }
     }
   },
 
-  // Files the page loads. data/*.json are rewritten every Friday by the
-  // GitHub Action in .github/workflows/update-data.yml.
+  // Files the page loads. incidents.json and types.json are written by
+  // tools/build-data.mjs; the rest are edited by hand.
   files: {
-    incidents: "data/incidents.json", // built from the sheet
+    incidents: "data/incidents.json", // built from the spreadsheet
     types: "data/types.json", // the 34 incident types and their categories
     profiles: "data/profiles.json", // country fact sheets (edited by hand)
     reports: "data/reports.json", // report links (placeholders for now)
     world: "data/world.json" // map outlines (built once by tools/build_map.py)
   },
 
-  // When the site refreshes. The Action runs every Friday; this is used to
-  // work out which week is "the latest" (the week ending on the most recent
-  // Friday) and is shown in the footer note.
-  publish: { weekday: 5 /* Friday */, hour: 17, timeZone: "America/New_York", label: "Fridays at 5pm ET" },
+  // Publishing rhythm. A refresh publishes incidents through the most recent
+  // Friday at 5pm ET, so every published week is complete; that week is the
+  // "latest" one on the site. `label` appears in the footer note.
+  publish: { weekday: 5 /* Friday */, hour: 17, timeZone: "America/New_York", label: "weekly" },
 
   /* =============================================================== WEEKS */
 

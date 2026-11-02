@@ -39,9 +39,9 @@ config.js                    THE file to edit: sheet, countries, regions, colour
 index.html                   page skeleton; each id is filled by one component
 css/styles.css               all styles (New Lines branding from the mockup)
 data/
-  incidents.json             built from the sheet every Friday (don't edit by hand)
+  incidents.json             built from the spreadsheet by tools/build-data.mjs (don't edit by hand)
   types.json                 the 34 incident types and their categories (also built)
-  build-report.txt           sheet problems found by the last update, for the analysts
+  build-report.txt           sheet problems found by the last refresh, for the analysts
   profiles.json              country fact sheets, shown exactly as written (edit by hand)
   reports.json               report links (placeholders; edit by hand)
   world.json                 map outlines (Natural Earth; built once by tools/build_map.py)
@@ -57,9 +57,8 @@ js/
   screens/                   overview, feed, reports, alerts
   lib/csv.js                 CSV parser
 tools/
-  build-data.mjs             the Friday update (Node 18+, no packages needed)
+  build-data.mjs             refreshes data/ from CSV exports (Node 18+, no packages needed)
   build_map.py               one-off: Natural Earth GeoJSON → data/world.json
-.github/workflows/update-data.yml   runs build-data.mjs every Friday at 5pm ET
 ```
 
 Every component has the same shape and starts with a comment that says what it shows, which state it reads and writes, and which element it fills:
@@ -87,39 +86,43 @@ Components never call each other. They change what's shown only through `ctx.sto
 | Set the real address for citations and share links | `config.js` → `publicUrl` |
 | Replace the Mass Atrocities placeholder | `config.js` → `crossLinks` |
 
-## The Friday update
+## Updating the data
 
-`.github/workflows/update-data.yml` runs every Friday at 5pm ET (two UTC triggers cover daylight saving). It:
+The site is **static**: nothing reads the spreadsheet automatically. When you want to publish new incidents (e.g. each Friday):
 
-1. reads three tabs of the sheet: *Incidents - Global*, *Incidents - Type* and *Incidents - Category Mapping*;
-2. cleans the rows (`js/data/normalize.js`): standardizes the five severity levels, matches types to the type list, and computes each incident's week;
-3. publishes incidents dated up to that Friday into `data/incidents.json` and `data/types.json`, and lists anything the analysts should check in `data/build-report.txt` (e.g. a ticked checkbox with no score, an unknown type, a possible duplicate);
-4. commits the files, which republishes the site.
+1. **Export three tabs as CSV into one folder** (e.g. a folder called `exports` on your desktop):
+   - **Incidents - Global**
+   - **Incidents - Type**
+   - **Incidents - Category Mapping**
 
-**Safety checks.** If the new data has fewer than half as many incidents as last week (a broken export), the run stops and the site keeps last week's data. If nothing changed, nothing is committed.
+   In Google Sheets, open each tab and use *File → Download → Comma-separated values (.csv)*. In Excel, open each tab and use *File → Save As → CSV UTF-8*.
 
-To run the update by hand, open the **Actions** tab → **Friday data update** → **Run workflow**. Or run it locally with `node tools/build-data.mjs`.
+   Any file name works, as long as it **ends with the tab's name**. Google's default names, like `Global Incident Feed … - Incidents - Global.csv`, work as they are.
+2. **Rebuild the data.** From this project folder, run:
+   ```
+   node tools/build-data.mjs ~/Desktop/exports
+   ```
+   This needs [Node.js](https://nodejs.org) 18 or newer, and no other installs. It:
+   - cleans the rows (`js/data/normalize.js`): standardizes the five severity levels, matches types to the type list, and assigns each incident its week;
+   - publishes incidents dated through the most recent Friday into `data/incidents.json` and `data/types.json`;
+   - lists anything the analysts should check in `data/build-report.txt`, e.g. a ticked checkbox with no score, an unknown type, or a possible duplicate.
 
-### Connecting the sheet
+   **Safety check:** if the new data has fewer than half as many incidents as the current data (a wrong or empty export), nothing is written.
+3. **Check it locally** (see below), then **commit and push** the `data/` folder. In GitHub Desktop, write a summary like "Data through Nov 6", then *Commit to main* → *Push origin*.
 
-Pick one of two options.
+### Moving the spreadsheet to Excel
 
-**Option A (recommended): a Google service account.** The sheet stays private.
+Nothing in the site depends on Google. As long as the Excel workbook keeps the same three tabs and column headings, the steps above work unchanged with CSVs saved from Excel. If tabs are renamed, update the names in `config.js` → `sheet.tabs`.
 
-1. In Google Cloud Console, create a project (or use an existing one), enable the **Google Sheets API**, and create a **service account**. Create a JSON key for it.
-2. Share the Google Sheet with the service account's email address, as **Viewer**.
-3. In this GitHub repository, go to Settings → Secrets and variables → Actions → **New repository secret**. Name it `GOOGLE_SERVICE_ACCOUNT_JSON` and paste the whole JSON key file as the value.
-
-**Option B: link sharing.** In the sheet, set Share → *Anyone with the link* → **Viewer**. No secret is needed, but anyone with the sheet's URL can read it.
+Later, the refresh could be automated by reading the workbook from SharePoint or OneDrive through Microsoft Graph and running this same script on a schedule. Only the "read the file" step would change.
 
 ### Running locally
 
 ```
 python3 -m http.server 8000      # then open http://localhost:8000
-node tools/build-data.mjs --local ./exports    # rebuild from CSVs saved from the sheet
 ```
 
-The page must be served over http(s), not opened as a file, because browsers block module scripts and data files from `file://` pages.
+The page must be served over http(s), not opened as a file, because browsers block module scripts and data files on `file://` pages.
 
 ## For IT: integrating behind the paywall
 

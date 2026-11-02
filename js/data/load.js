@@ -4,7 +4,7 @@
  * Returns {
  *   incidents  cleaned incidents, newest first (see data/normalize.js)
  *   asOf       the Friday the data is published through ("2026-10-30")
- *   generated  when the Friday update ran (ISO timestamp)
+ *   generated  when the data was last refreshed (ISO timestamp)
  *   types      [{ name, category }] for the filters
  *   profiles   country fact sheets
  *   reports    report links (placeholders)
@@ -16,7 +16,7 @@
  */
 
 async function loadJSON(url) {
-  const res = await fetch(url, { cache: "no-cache" }); // always pick up Friday's update
+  const res = await fetch(url, { cache: "no-cache" }); // always pick up the latest refresh
   if (!res.ok) throw new Error(`${url}: ${res.status}`);
   return res.json();
 }
