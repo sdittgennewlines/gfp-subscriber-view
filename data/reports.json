@@ -1,0 +1,16 @@
+{
+  "_about": "Reports listed on the Reports screen and in the 'This week's New Lines reports' strip. Placeholders until real links exist: replace '#' with each report's URL. 'weekly' entries are generated automatically for every published week unless listed here with a real url.",
+  "weeklyMonitor": {
+    "label": "Weekly Forecast Monitor",
+    "urlTemplate": "#wfm-{week}",
+    "note": "[Full Weekly Forecast Monitor PDF. Link to be added]"
+  },
+  "quarterly": [
+    { "title": "2026 Fourth Quarter Forecast Report", "date": "2026-09-30", "url": "https://newlinesinstitute.org/forecast/2026-fourth-quarter-forecast-report/", "summary": "[One-paragraph summary of the quarterly forecast]" },
+    { "title": "[2026 Third Quarter Forecast Report]", "date": "2026-06-30", "url": "#", "summary": "[One-paragraph summary of the quarterly forecast]" },
+    { "title": "[2026 Second Quarter Forecast Report]", "date": "2026-03-31", "url": "#", "summary": "[One-paragraph summary of the quarterly forecast]" }
+  ],
+  "podcast": [
+    { "title": "[Weekly podcast episode title]", "date": "2026-10-30", "duration": "[DURATION]", "url": "#" }
+  ]
+}

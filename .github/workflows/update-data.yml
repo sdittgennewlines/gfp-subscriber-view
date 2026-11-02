@@ -1,0 +1,58 @@
+# Friday data update: reads the Google Sheet and republishes the platform's data.
+#
+# Runs every Friday at 5pm US Eastern. GitHub schedules in UTC and doesn't
+# know about daylight saving, so there are two triggers: 21:00 UTC is 5pm in
+# summer (EDT), 22:00 UTC is 5pm in winter (EST). The build works out the
+# "as of" Friday itself, so whichever run comes first publishes and the
+# other finds nothing new.
+#
+# Run it by hand any time: Actions tab → "Friday data update" → Run workflow.
+#
+# Sheet access: set the repository secret GOOGLE_SERVICE_ACCOUNT_JSON (see
+# README, "Connecting the sheet"). Without it, the sheet must be shared as
+# "Anyone with the link can view".
+
+name: Friday data update
+
+on:
+  schedule:
+    - cron: "0 21 * * 5" # 5pm EDT (summer)
+    - cron: "0 22 * * 5" # 5pm EST (winter)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # to commit the refreshed data files
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read the sheet and rebuild data/
+        run: node tools/build-data.mjs
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Show what the analysts may want to check
+        run: cat data/build-report.txt
+
+      - name: Commit if anything changed
+        run: |
+          if git diff --quiet -- data/; then
+            echo "No changes to publish."
+            exit 0
+          fi
+          git config user.name "gfp-data-bot"
+          git config user.email "gfp-data-bot@users.noreply.github.com"
+          git add data/
+          git commit -m "Data update: $(node -e "console.log(require('./data/incidents.json').count + ' incidents through ' + require('./data/incidents.json').asOf)")"
+          git push

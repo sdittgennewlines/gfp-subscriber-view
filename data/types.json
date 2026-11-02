@@ -1,0 +1,141 @@
+{
+  "generated": "2026-11-02T21:35:46.954Z",
+  "types": [
+    {
+      "name": "Military exercises",
+      "category": "Security/Intel action"
+    },
+    {
+      "name": "Military mobilizations",
+      "category": "Security/Intel action"
+    },
+    {
+      "name": "Military deployments",
+      "category": "Security/Intel action"
+    },
+    {
+      "name": "Military confrontation",
+      "category": "Security/Intel action"
+    },
+    {
+      "name": "Defense Manufacturing",
+      "category": "Security/Intel action"
+    },
+    {
+      "name": "Trade restrictions",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Critical minerals restrictions",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Sanctions",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Domestic economic adjustments",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Antagonistic rhetoric",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Cyber/intel operation",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Arrests",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Political Destabilization",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Political Stabilization",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Climate",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Energy",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Diplomatic support",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Diplomatic visits",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Diplomatic negotiations",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Diplomatic agreements",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Easing restrictions",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Lifting restrictions",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Easing critical minerals restrictions",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Peacetime activities",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Elections",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Assassinations",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Financial sector reform",
+      "category": "Domestic Policy Action"
+    },
+    {
+      "name": "Education adjustments",
+      "category": "Domestic Policy Action"
+    },
+    {
+      "name": "Disease Outbreak",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Political Appointment",
+      "category": "Diplomatic/Political action"
+    },
+    {
+      "name": "Natural Disaster",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Economic Decline",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Financial/Foreign Investment",
+      "category": "Economic/Hybrid action"
+    },
+    {
+      "name": "Political Dismissal",
+      "category": "Diplomatic/Political action"
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Geopolitical Forecasting Platform · New Lines Institute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<!--
+  Geopolitical Forecasting Platform: subscriber view.
+
+  This file is only the page skeleton. Every element with an id below is
+  filled in by one component in js/ (named in the comment next to it).
+  Start reading at js/main.js.
+-->
+<div class="gfp" id="app">
+  <div class="wrap">
+
+    <!-- Site header (static; the New Lines site supplies its own when embedded) -->
+    <header class="site-header">
+      <a class="logo" href="#" aria-label="New Lines Institute home">
+        <svg width="34" height="68" viewBox="0 0 35 68" aria-hidden="true"><path d="M34.0628 67.7056V0.136103H33.5767V26.4475C33.3355 27.9488 32.7443 28.9639 31.842 29.3295C31.033 29.6562 30.0101 29.415 28.9133 28.6877L10.1123 9.85556L9.77002 10.2017L28.5205 28.9678C29.3256 30.1112 29.6018 31.173 29.2556 32.0248C28.9095 32.8766 27.9566 33.4638 26.5564 33.7283H0V34.2262H26.6303C27.9916 34.4984 28.9211 35.0779 29.2556 35.918C29.5901 36.7581 29.3723 37.6643 28.7111 38.7067L9.77002 57.6439L10.1162 57.99L28.96 39.1501C30.0374 38.4461 31.0447 38.2127 31.842 38.5394C32.7443 38.905 33.3355 39.9201 33.5767 41.4214V67.7134L34.0628 67.7056Z" fill="#1B1725"></path></svg>
+        <span class="logo-words"><span class="big">NEW LINES</span><span class="big">INSTITUTE</span><span class="small">FOR STRATEGY AND POLICY</span></span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <span class="user"><span class="avatar" aria-hidden="true">S</span><span id="subscriberName"></span></span>
+        <span class="vrule" aria-hidden="true"></span>
+        <button class="icon-btn" aria-label="Search"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7"></circle><path d="M16 16l5 5"></path></svg></button>
+        <button class="menu-btn" aria-label="Menu"><svg width="20" height="16" viewBox="0 0 20 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 2h16M2 8h16M2 14h16"></path></svg></button>
+      </nav>
+    </header>
+
+    <div class="title-row" id="titleBar"></div>          <!-- components/titleBar.js -->
+    <nav class="tabs" id="tabs" aria-label="Platform"></nav> <!-- components/tabs.js -->
+
+    <main>
+      <!-- OVERVIEW: screens/overview.js -->
+      <section class="screen" id="screen-overview" role="tabpanel" aria-labelledby="tab-overview" hidden></section>
+
+      <!-- GSI MAP: one component per box -->
+      <section id="screen-map" role="tabpanel" aria-labelledby="tab-map" hidden>
+        <div class="toolbar" id="mapToolbar"></div>            <!-- components/map/toolbar.js -->
+        <div class="map-layout">
+          <div class="map-main">
+            <section class="panel" id="mapPanel" aria-label="GSI map"></section>        <!-- components/map/worldMap.js -->
+            <section class="panel" id="eventsPanel" aria-labelledby="evTitle"></section> <!-- components/map/eventsPanel.js -->
+          </div>
+          <aside class="panel profile" id="profilePanel" aria-label="Profile"></aside>   <!-- components/map/profilePanel.js -->
+        </div>
+        <section class="ranks" id="rankTable"></section>        <!-- components/map/rankTable.js -->
+        <section class="reports-strip" id="reportsStrip"></section> <!-- components/map/reportsStrip.js -->
+        <section class="method" id="method">                    <!-- static: how the GSI is calculated -->
+          <details>
+            <summary>How the GSI works</summary>
+            <p>The Geopolitical Stability Index (GSI) measures whether a country, region or global theme became more or less stable in a given week, on a scale from −100 (sharp destabilization) to +100 (sharp stabilization). A score near zero means the status quo held.</p>
+            <ul>
+              <li><b>Incidents.</b> The Geopolitical Forecasting and Analysis Unit records significant incidents as they happen. Each gets a type, a severity (Low to High) and a score in steps of 20, from −90 to +90.</li>
+              <li><b>Who an incident counts toward.</b> Analysts tie each incident to the spotlight countries, regions and themes it affects, and score it for each one separately. An incident in one country can therefore move several GSIs by different amounts.</li>
+              <li><b>The weekly GSI.</b> A country's, region's or theme's GSI for a week is the average of its scores over that week's incidents. Weeks run Saturday to Friday.</li>
+              <li><b>Weeks with no incidents</b> have no GSI. They are left blank (white, with a dashed outline) rather than counted as zero.</li>
+              <li><b>Countries outside the 17 spotlight countries</b> have no GSI, but their incidents are shown and can move the GSI of the countries, regions and themes they're tied to.</li>
+              <li><b>Updates.</b> The platform refreshes every Friday at 5pm ET with the week's incidents.</li>
+            </ul>
+          </details>
+        </section>
+      </section>
+
+      <!-- EVENT FEED: screens/feed.js -->
+      <section class="screen" id="screen-feed" role="tabpanel" aria-labelledby="tab-feed" hidden></section>
+      <!-- REPORTS: screens/reports.js -->
+      <section class="screen" id="screen-reports" role="tabpanel" aria-labelledby="tab-reports" hidden></section>
+      <!-- ALERTS: screens/alerts.js -->
+      <section class="screen" id="screen-alerts" role="tabpanel" aria-labelledby="tab-alerts" hidden></section>
+
+      <p class="load-error" id="loadError" hidden>The platform's data couldn't be loaded. Please refresh the page; if it keeps happening, contact the Geopolitical Forecasting and Analysis Unit.</p>
+    </main>
+
+    <p class="data-note" id="dataNote"></p>
+  </div>
+
+  <footer class="site-footer">
+    <div class="in">
+      <span style="display:flex;flex-direction:column;gap:6px"><span class="nm">NEW LINES INSTITUTE</span><span class="addr">1660 L Street NW, Suite 450, Washington, D.C.</span></span>
+      <nav aria-label="Footer"><a href="#">ABOUT US</a><a href="#">PUBLICATIONS</a><a href="#">GEOPOLITICAL FORECASTS</a><a href="#monitors">MONITORS</a><a href="#">CONTACT US</a></nav>
+    </div>
+  </footer>
+
+  <div id="dialogRoot"></div>                                   <!-- actions/cite.js -->
+  <div class="toast" id="toast" role="status" hidden></div>     <!-- actions/toast.js -->
+  <div class="tip" id="tip" hidden></div>                       <!-- actions/tooltip.js -->
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
