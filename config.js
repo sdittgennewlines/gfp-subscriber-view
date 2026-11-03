@@ -142,7 +142,7 @@ export const CONFIG = {
 
   /* ======================================================== GSI COLOURS */
 
-  // The diverging scale: red = destabilizing, pale gold =
+  // The diverging scale: red = destabilizing, light purple =
   // status quo, blue = stabilizing. `max` is the upper edge of each step
   // (exclusive for positive steps, inclusive for negative ones, as drawn).
   scale: [
@@ -150,7 +150,7 @@ export const CONFIG = {
     { max: -40, fill: "#B8352B", label: "−40 to −60" },
     { max: -20, fill: "#D9705F", label: "−20 to −40" },
     { max: -5, fill: "#F0B3A5", label: "−5 to −20" },
-    { max: 5, fill: "#EBD9A1", label: "Status quo (−5 to +5)" },
+    { max: 5, fill: "#E6E0F4", label: "Status quo (−5 to +5)" },
     { max: 20, fill: "#B7CDEA", label: "+5 to +20" },
     { max: 40, fill: "#7FA6D8", label: "+20 to +40" },
     { max: 60, fill: "#4277BE", label: "+40 to +60" },

@@ -59,7 +59,7 @@ export function createMapToolbar(ctx) {
           <select id="selPicker">${options}</select>
         </label>
       </div>
-      <div class="legend" aria-label="Colour scale, from destabilizing (red) through status quo (pale gold) to stabilizing (blue)">
+      <div class="legend" aria-label="Colour scale, from destabilizing (red) through status quo (light purple) to stabilizing (blue)">
         <span class="t" style="margin-left:0">Destabilizing</span>
         ${cfg.scale.map((s) => `<span class="sw" style="background:${s.fill}" title="${esc(s.label)}"></span>`).join("")}
         <span class="t">Stabilizing</span>

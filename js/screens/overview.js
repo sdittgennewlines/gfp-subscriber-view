@@ -34,7 +34,7 @@ const KEY_INCIDENTS = 8; // how many key incidents to list
 const HEAT_WEEKS = 8; // columns in the heat table
 const BALANCE_WEEKS = 12; // weeks in the escalation-balance chart
 const CATEGORY_COLOURS = ["#1B1725", "#7A6528", "#BFA359", "#8C8A91", "#DCDAD3"];
-const SCENARIO_COLOURS = { Escalation: "#C4483B", "Status quo": "#C9A94E", "De-escalation": "#3D6FB0" };
+const SCENARIO_COLOURS = { Escalation: "#C4483B", "Status quo": "#ADA2D3", "De-escalation": "#3D6FB0" };
 
 export function createOverview(ctx) {
   const { cfg, store, gsi, incidents, reports } = ctx;

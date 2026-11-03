@@ -31,14 +31,14 @@ export function fill(v) {
   return step.fill;
 }
 
-/** Text colour that reads on white: red for destabilizing, blue for stabilizing, dark gold for status quo. */
-export const ink = (v) => (v === null || v === undefined ? "#5E5A66" : v <= -5 ? "#9E2F20" : v >= 5 ? "#1F4E8C" : "#7A6528");
+/** Text colour that reads on white: red for destabilizing, blue for stabilizing, purple for status quo. */
+export const ink = (v) => (v === null || v === undefined ? "#5E5A66" : v <= -5 ? "#9E2F20" : v >= 5 ? "#1F4E8C" : "#5A4B80");
 
 /** Light background tint for score badges. */
-export const tint = (v) => (v === null || v === undefined ? "#F1F0EC" : v <= -5 ? "#F7E1DD" : v >= 5 ? "#DEE8F5" : "#F6EED6");
+export const tint = (v) => (v === null || v === undefined ? "#F1F0EC" : v <= -5 ? "#F7E1DD" : v >= 5 ? "#DEE8F5" : "#F0ECF8");
 
 /** Left-edge colour of an incident row, by its score (grey = no score). */
-export const edge = (v) => (v === null || v === undefined ? "#CFCCC4" : v <= -5 ? "#C4483B" : v >= 5 ? "#3D6FB0" : "#C9A94E");
+export const edge = (v) => (v === null || v === undefined ? "#CFCCC4" : v <= -5 ? "#C4483B" : v >= 5 ? "#3D6FB0" : "#ADA2D3");
 
 /** Inline style for a score badge (used all over). */
 export const badgeStyle = (v) => `background:${tint(v)};color:${ink(v)}`;
