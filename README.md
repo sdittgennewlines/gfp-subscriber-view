@@ -10,8 +10,8 @@ The paywall, logins and subscriber accounts are **not** part of this code. IT ad
 
 | Tab | What it shows |
 |---|---|
-| **Overview** | The week at a glance: key figures, an analyst summary (placeholder), key incidents, biggest movers, regions and themes, incidents by category, and an 8-week heat table |
-| **GSI Map** | A world map shaded by GSI, with a switch between *Country level* and *Regions & themes*. Below it: the selection's events week by week, the full event detail, a profile with a weekly trend, a ranking table and that week's reports. Countries outside the 17 are grey and clickable: they show their incidents and profile, but no GSI. |
+| **Overview** | The analyst summary (placeholder) beside the week's three reports: Weekly Forecast Monitor, podcast, quarterly. Below: incidents this week, most destabilized and most stabilized, key incidents, biggest movers, regions and themes, incidents by category, escalation balance over 12 weeks, and an 8-week heat table |
+| **GSI Map** | A world map coloured by GSI, with bubbles counting each country's incidents that week. It zooms (+/−, double-click, pinch, Ctrl/⌘ + scroll), and zoomed in, bubbles add names and GSI. A switch moves between *Country level* and *Regions & themes*; NATO covers all of Europe plus Ukraine, Belarus and Russia. Below the map: the selection's events week by week, the full event detail, and a profile with a weekly trend that marks incidents scored ±70 or more. Then a ranking table and that week's reports. Countries outside the 17 are grey and clickable: they show their incidents and profile, but no GSI. On narrower screens the profile sits between the map and the events. |
 | **Event Feed** | Every incident, searchable. Filters cover dates, place, severity, category → type, scope, scenario and GSI direction. The filtered list downloads as CSV. |
 | **Reports** | Weekly Forecast Monitors (one per week), quarterly forecasts and the podcast. All links are placeholders except the Q4 2026 quarterly. |
 | **Alerts** | A **preview**: subscribers can build alerts and see how often each would have fired this year. Nothing is saved or sent. |
@@ -52,7 +52,7 @@ js/
   model/                     no DOM: gsi.js (all GSI maths), weeks.js, places.js, selection.js
   ui/                        format.js (numbers, colours), dom.js (helpers)
   actions/                   cite, share, download, toast, tooltip
-  components/                titleBar, tabs, eventDetail (shared), trendChart (shared)
+  components/                titleBar, tabs, eventDetail, trendChart, reportCards (shared pieces)
   components/map/            the GSI Map: toolbar, worldMap, eventsPanel, profilePanel, rankTable, reportsStrip
   screens/                   overview, feed, reports, alerts
   lib/csv.js                 CSV parser
@@ -78,7 +78,9 @@ Components never call each other. They change what's shown only through `ctx.sto
 |---|---|
 | Add or rename a spotlight country | `config.js` → `entities` (add the sheet's checkbox and score column names) |
 | Change which countries are shaded for a region | `config.js` → the region's `members` (map names are listed in `data/world.json`) |
-| Move a crowded map chip | `config.js` → the country's `chipAt: [longitude, latitude]` |
+| Move a crowded map bubble | `config.js` → the country's `chipAt: [longitude, latitude]` |
+| Change which incidents are marked on the trend chart | `config.js` → `trendMarkerThreshold` (default 70) |
+| Change how far the map zooms, or when bubbles show names | `config.js` → `mapZoom` |
 | Fix a location that doesn't appear on the map | `config.js` → `placeAliases` (spelling) or `placePins` (small places) |
 | Change colours | `config.js` → `scale`, `otherPlaceFill`, `emptyPlaceFill`, plus `css/styles.css` |
 | Update a country profile | `data/profiles.json` |

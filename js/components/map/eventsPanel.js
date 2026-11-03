@@ -22,13 +22,11 @@
  * DOM:    #eventsPanel
  */
 import { byId, esc, onAction } from "../../ui/dom.js";
-import { fmt, fmtInt, ink, badgeStyle, plural } from "../../ui/format.js";
+import { fmt, fmtInt, ink, badgeStyle, plural, edge } from "../../ui/format.js";
 import { describe, events, unscoredCount } from "../../model/selection.js";
 import { weekLabel, shortDate, longDate } from "../../model/weeks.js";
 import { renderEventDetail, eventDetailActions, crossLinkFor } from "../eventDetail.js";
 
-/** Left-edge colour of an event row, by the score it carries for the selection. */
-const edgeColour = (score) => (score === null ? "#CFCCC4" : score <= -5 ? "#C4483B" : score >= 5 ? "#3D6FB0" : "#9C8EC2");
 
 export function createEventsPanel(ctx) {
   const { store, gsi } = ctx;
@@ -65,7 +63,7 @@ export function createEventsPanel(ctx) {
       const badge = score !== null
         ? `<span class="badge" style="${badgeStyle(score)}">${fmtInt(score)}</span>`
         : `<span class="badge neutral">${d.hasGsi ? "Not scored" : esc(inc.severity || "–")}</span>`;
-      return `<button class="ev-row${xl ? " xl" : ""}" data-action="pick" data-id="${inc.id}" aria-pressed="false" style="border-left-color:${edgeColour(score)}">
+      return `<button class="ev-row${xl ? " xl" : ""}" data-action="pick" data-id="${inc.id}" aria-pressed="false" style="border-left-color:${edge(score)}">
         <span class="top"><span>${shortDate(inc.date)} · ${esc(inc.type)}</span>${badge}</span>
         <span class="t">${esc(inc.title)}</span>
         ${d.level === "country" || d.level === "place" ? "" : `<span class="loc">${esc(inc.location)}</span>`}

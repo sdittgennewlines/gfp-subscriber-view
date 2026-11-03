@@ -15,7 +15,7 @@
 import { byId, esc, onAction, safeUrl } from "../ui/dom.js";
 import { fmt, badgeStyle, plural } from "../ui/format.js";
 import { weekLabel, longDate } from "../model/weeks.js";
-import { weeklyMonitorUrl } from "../components/map/reportsStrip.js";
+import { weeklyMonitorUrl } from "../components/reportCards.js";
 
 const WEEKS_SHOWN = 12; // weekly monitors listed before "Show all"
 

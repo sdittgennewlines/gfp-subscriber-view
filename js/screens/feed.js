@@ -25,7 +25,7 @@
  * DOM:    #screen-feed
  */
 import { byId, esc, onAction } from "../ui/dom.js";
-import { fmtInt, badgeStyle, plural } from "../ui/format.js";
+import { fmtInt, badgeStyle, plural, edge } from "../ui/format.js";
 import { shortDate, weekLabel, longDate } from "../model/weeks.js";
 import { renderEventDetail, eventDetailActions } from "../components/eventDetail.js";
 import { downloadText } from "../actions/download.js";
@@ -230,7 +230,7 @@ export function createFeed(ctx) {
   }
 
   function row(i) {
-    return `<button class="ev-row" data-action="pick" data-id="${i.id}" aria-pressed="false" style="border-left-color:${i.gsi === null ? "#CFCCC4" : i.gsi <= -5 ? "#C4483B" : i.gsi >= 5 ? "#3D6FB0" : "#9C8EC2"}">
+    return `<button class="ev-row" data-action="pick" data-id="${i.id}" aria-pressed="false" style="border-left-color:${edge(i.gsi)}">
       <span class="top"><span>${shortDate(i.date)} · ${esc(i.type)}</span><span class="badge" style="${badgeStyle(i.gsi)}">${fmtInt(i.gsi)}</span></span>
       <span class="t">${esc(i.title)}</span>
       <span class="loc">${esc(i.location)}${i.severity ? ` · Severity: ${esc(i.severity)}` : ""}</span>

@@ -86,9 +86,9 @@ export const CONFIG = {
 
     // Regions. `members` are the map countries shaded in the region's colour
     // (Natural Earth names, see data/world.json); `label` is where the chip
-    // sits, as [longitude, latitude]. NATO is drawn as its European members
-    // plus Turkey, because the US and Canada are already drawn as part of
-    // US/Americas; the tooltip says so.
+    // sits, as [longitude, latitude]. NATO covers all of Europe plus Ukraine,
+    // Belarus and Russia. The US and Canada are drawn under US/Americas,
+    // because a country can only be shaded one colour.
     {
       key: "Indopacific", name: "Indo-Pacific", level: "region", check: "Indopacific", score: "GSI Indopac", label: [118, 18],
       note: "East, South and Southeast Asia, Australia and the Pacific",
@@ -97,12 +97,12 @@ export const CONFIG = {
     {
       key: "MENA", name: "Middle East & North Africa", level: "region", check: "MENA", score: "GSI MENA", label: [42, 24],
       note: "The Middle East, the Gulf and North Africa",
-      members: ["Morocco", "W. Sahara", "Algeria", "Tunisia", "Libya", "Egypt", "Israel", "Palestine", "Lebanon", "Syria", "Jordan", "Iraq", "Iran", "Saudi Arabia", "Yemen", "Oman", "United Arab Emirates", "Qatar", "Kuwait", "Cyprus", "N. Cyprus"]
+      members: ["Morocco", "W. Sahara", "Algeria", "Tunisia", "Libya", "Egypt", "Israel", "Palestine", "Lebanon", "Syria", "Jordan", "Iraq", "Iran", "Saudi Arabia", "Yemen", "Oman", "United Arab Emirates", "Qatar", "Kuwait"]
     },
     {
-      key: "NATO", name: "NATO", level: "region", check: "NATO", score: "GSI NATO", label: [14, 54],
-      note: "The alliance; drawn as its European members and Turkey (the US and Canada are drawn under US/Americas)",
-      members: ["Albania", "Belgium", "Bulgaria", "Croatia", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Greenland", "Hungary", "Iceland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Montenegro", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden", "Turkey", "United Kingdom"]
+      key: "NATO", name: "NATO", level: "region", check: "NATO", score: "GSI NATO", label: [32, 57],
+      note: "NATO's members plus the rest of Europe, Ukraine, Belarus and Russia; drawn without the US and Canada, which are drawn under US/Americas",
+      members: ["Albania", "Austria", "Belarus", "Belgium", "Bosnia and Herz.", "Bulgaria", "Croatia", "Cyprus", "N. Cyprus", "Czechia", "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Greenland", "Hungary", "Iceland", "Ireland", "Italy", "Kosovo", "Latvia", "Lithuania", "Luxembourg", "Moldova", "Montenegro", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Russia", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland", "Turkey", "Ukraine", "United Kingdom"]
     },
     {
       key: "Americas", name: "US/Americas", level: "region", check: "US/Americas", score: "GSI US/Americas", label: [-98, 28],
@@ -142,7 +142,7 @@ export const CONFIG = {
 
   /* ======================================================== GSI COLOURS */
 
-  // The diverging scale from the mockup: red = destabilizing, light purple =
+  // The diverging scale: red = destabilizing, pale gold =
   // status quo, blue = stabilizing. `max` is the upper edge of each step
   // (exclusive for positive steps, inclusive for negative ones, as drawn).
   scale: [
@@ -150,12 +150,21 @@ export const CONFIG = {
     { max: -40, fill: "#B8352B", label: "−40 to −60" },
     { max: -20, fill: "#D9705F", label: "−20 to −40" },
     { max: -5, fill: "#F0B3A5", label: "−5 to −20" },
-    { max: 5, fill: "#D9CFEC", label: "Status quo (−5 to +5)" },
+    { max: 5, fill: "#EBD9A1", label: "Status quo (−5 to +5)" },
     { max: 20, fill: "#B7CDEA", label: "+5 to +20" },
     { max: 40, fill: "#7FA6D8", label: "+20 to +40" },
     { max: 60, fill: "#4277BE", label: "+40 to +60" },
     { max: Infinity, fill: "#1F4E8C", label: "+60 or higher" }
   ],
+  // Trend chart: incidents scored at least this far from zero (either
+  // direction) for the selected country/region/theme are marked on the chart
+  // as vertical lines (red = destabilizing, blue = stabilizing).
+  trendMarkerThreshold: 70,
+
+  // Map zoom. `max` = how far you can zoom in (8 = 8×). From `detailFrom`×
+  // the bubbles also show each place's name and GSI.
+  mapZoom: { max: 8, detailFrom: 2 },
+
   // Map fill for places that have incidents but no GSI (non-spotlight
   // countries), and for places with nothing at all.
   otherPlaceFill: "#DAD6CC",
