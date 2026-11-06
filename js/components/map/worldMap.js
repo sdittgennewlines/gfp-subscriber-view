@@ -407,6 +407,7 @@ export function createWorldMap(ctx) {
       <g transform="translate(0,${top})">${shapes}</g>${labels}
       <text x="0" y="${legendY + 10}" font-size="12" fill="#3E3A46">Destabilizing</text>${swatches}
       <text x="${120 + cfg.scale.length * 28 + 6}" y="${legendY + 10}" font-size="12" fill="#3E3A46">Stabilizing</text>
+      <text x="${W}" y="${legendY + 10}" font-size="12" fill="#3E3A46" text-anchor="end">${xml(cfg.copyright)}</text>
       <text x="0" y="${legendY + 40}" font-size="11" fill="#5E5A66">GSI = average score of the week's incidents tied to each ${regionMode ? "region" : "country"}, −100 to +100; (n) = incidents this week. Map: Natural Earth.</text>
     </svg>`;
     const name = `gsi-map-${regionMode ? "regions" : "countries"}-${state.week}`;

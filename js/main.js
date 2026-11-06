@@ -48,6 +48,7 @@ import { createFeed } from "./screens/feed.js";
 import { createReports } from "./screens/reports.js";
 import { createAlerts } from "./screens/alerts.js";
 import { createCiteDialog } from "./actions/cite.js";
+import { initExportDialog } from "./actions/exportDialog.js";
 
 const app = byId("app");
 
@@ -103,6 +104,7 @@ async function start() {
 
   // 5. Components. Order doesn't matter: each owns its own part of the page.
   byId("subscriberName").textContent = CONFIG.subscriberName;
+  initExportDialog(); // the shared Download pop-up (CSV / Excel / PNG)
   //    `tab` = only render while that tab is showing (saves work on hidden screens).
   const components = [
     { make: createTitleBar },

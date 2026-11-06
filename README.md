@@ -16,6 +16,13 @@ The paywall, logins and subscriber accounts are **not** part of this code. IT ad
 | **Reports** | Weekly Forecast Monitors (one per week), quarterly forecasts and the podcast. All links are placeholders except the Q4 2026 quarterly. |
 | **Alerts** | A **preview**: subscribers can build alerts and see how often each would have fired this year. Nothing is saved or sent. |
 
+**Downloads.** Every Overview chart, and the trend chart on the GSI Map, has a **Download** button. It opens a pop-up offering three formats:
+- **CSV**: the data only.
+- **Excel**: an .xlsx with the title above the table and the copyright below it.
+- **PNG**: the drawn chart, footed with "© 2026 The New Lines Institute".
+
+The map downloads as a PNG directly, also with the copyright. The Event Feed downloads its filtered list as CSV or Excel.
+
 Throughout the site:
 
 - **Cite** gives the citation in Chicago, APA and MLA.
@@ -51,11 +58,13 @@ js/
   data/load.js, normalize.js loading and cleaning the sheet's rows
   model/                     no DOM: gsi.js (all GSI maths), weeks.js, places.js, selection.js
   ui/                        format.js (numbers, colours), dom.js (helpers)
-  actions/                   cite, share, download, toast, tooltip
+  actions/                   cite, share, download, exportDialog (CSV/Excel/PNG pop-up), toast, tooltip
+  export/pngCharts.js        draws the PNG version of each chart (same frame + copyright on all)
   components/                titleBar, tabs, eventDetail, trendChart, reportCards (shared pieces)
   components/map/            the GSI Map: toolbar, worldMap, eventsPanel, profilePanel, rankTable, reportsStrip
   screens/                   overview, feed, reports, alerts
   lib/csv.js                 CSV parser
+  lib/xlsx.js, lib/zip.js    writes Excel files (no libraries needed)
 tools/
   build-data.mjs             refreshes data/ from CSV exports (Node 18+, no packages needed)
   build_map.py               one-off: Natural Earth GeoJSON → data/world.json
@@ -86,6 +95,8 @@ Components never call each other. They change what's shown only through `ctx.sto
 | Update a country profile | `data/profiles.json` |
 | Replace placeholder report links | `data/reports.json` |
 | Set the real address for citations and share links | `config.js` → `publicUrl` |
+| Change the copyright line on downloads | `config.js` → `copyright` |
+| Add a Download button to a new chart | Give it a spec (title, columns, rows, optional `image`) and call `openExport(spec)`. See `js/actions/exportDialog.js`. |
 | Replace the Mass Atrocities placeholder | `config.js` → `crossLinks` |
 
 ## Updating the data

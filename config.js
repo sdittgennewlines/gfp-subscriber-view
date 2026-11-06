@@ -177,6 +177,12 @@ export const CONFIG = {
   // ("low", "Low / Medium", "medium/high" ...) are folded into these.
   severities: ["Low", "Low/Medium", "Medium", "Medium/High", "High"],
 
+  /* ============================================================ DOWNLOADS */
+
+  // Printed at the bottom of every downloaded image (PNG), and under the
+  // table in Excel downloads.
+  copyright: "© 2026 The New Lines Institute",
+
   /* ======================================================== PLACEHOLDERS */
 
   // Everything below is a placeholder until the real links exist.

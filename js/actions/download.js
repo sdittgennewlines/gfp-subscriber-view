@@ -4,7 +4,9 @@
  *   downloadSvgAsPng(svgText, width, height, filename)
  *       Draws an SVG (map or chart) onto a canvas at 2x and saves a PNG.
  *   downloadText(text, filename, type)
- *       Saves a text file (the Event Feed's CSV export).
+ *       Saves a text file (CSV exports).
+ *   downloadBytes(bytes, filename, type)
+ *       Saves binary data (Excel exports).
  *
  * The SVGs passed in are self-contained (no external fonts or CSS), because
  * a browser drawing an SVG into a canvas can't load anything external.
@@ -28,6 +30,11 @@ export async function downloadSvgAsPng(svgText, width, height, filename) {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+/** Save raw bytes (e.g. an .xlsx built by lib/xlsx.js). */
+export function downloadBytes(bytes, filename, type = "application/octet-stream") {
+  save(new Blob([bytes], { type }), filename);
 }
 
 export function downloadText(text, filename, type = "text/csv;charset=utf-8") {

@@ -28,7 +28,7 @@ import { byId, esc, onAction } from "../ui/dom.js";
 import { fmtInt, badgeStyle, plural, edge } from "../ui/format.js";
 import { shortDate, weekLabel, longDate } from "../model/weeks.js";
 import { renderEventDetail, eventDetailActions } from "../components/eventDetail.js";
-import { downloadText } from "../actions/download.js";
+import { openExport } from "../actions/exportDialog.js";
 
 const PAGE = 50; // results shown per "Show more"
 
@@ -150,7 +150,7 @@ export function createFeed(ctx) {
               <option value="new">Newest first</option><option value="old">Oldest first</option>
               <option value="sev">Most severe first</option><option value="neg">Most destabilizing first</option><option value="pos">Most stabilizing first</option>
             </select></label>
-            <button class="btn" data-action="csv">Download CSV</button>
+            <button class="btn" data-action="csv">Download</button>
           </span>
         </div>
         <div class="active-filters" id="feedActive" hidden></div>
@@ -213,7 +213,7 @@ export function createFeed(ctx) {
       else setAll(`input[data-group="${k}"]`, true); // a checkbox group: tick everything again
       readForm();
     },
-    csv: () => downloadCsv(results()),
+    csv: () => openExport(exportSpec(results())),
     ...eventDetailActions(ctx, () => shownId)
   });
 
@@ -275,14 +275,19 @@ export function createFeed(ctx) {
     }
   }
 
-  /** The filtered incidents as a spreadsheet-friendly CSV, one score column per entity. */
-  function downloadCsv(list) {
-    const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const head = ["Date", "Week ending", "Location", "Title", "Type", "Category", "Severity", "Scope", "Scenario", "Headline GSI",
-      ...cfg.entities.map((e) => `GSI ${e.name}`), "Description", "Link"];
-    const rows = list.map((i) => [i.date, i.week, i.location, i.title, i.type, i.category, i.severity, i.scope, i.scenario, i.gsi,
-      ...cfg.entities.map((e) => i.scores[e.key] ?? ""), i.description, i.url]);
-    downloadText([head, ...rows].map((r) => r.map(cell).join(",")).join("\n"), `gfp-incidents-${ctx.asOf}.csv`);
+  /** The filtered incidents as a download (CSV or Excel), one score column per entity. No PNG: it's a list, not a chart. */
+  function exportSpec(list) {
+    const chips = activeChips().map(([, label]) => label);
+    return {
+      title: "Incidents",
+      subtitle: `${plural(list.length, "incident")}${chips.length ? ` · filters: ${chips.join("; ")}` : " · no filters"}`,
+      filename: `gfp-incidents-${ctx.asOf}`,
+      columns: [{ label: "Date", width: 12 }, { label: "Week ending", width: 12 }, { label: "Location", width: 18 }, { label: "Title", width: 60 },
+        { label: "Type", width: 26 }, { label: "Category", width: 26 }, { label: "Severity", width: 12 }, { label: "Scope", width: 13 }, { label: "Scenario", width: 13 },
+        { label: "Headline GSI", width: 12 }, ...cfg.entities.map((e) => ({ label: `GSI ${e.name}`, width: 12 })), { label: "Description", width: 80 }, { label: "Link", width: 40 }],
+      rows: list.map((i) => [i.date, i.week, i.location, i.title, i.type, i.category, i.severity, i.scope, i.scenario, i.gsi,
+        ...cfg.entities.map((e) => i.scores[e.key] ?? null), i.description, i.url])
+    };
   }
 
   /* ------------------------------------------------------------- render */

@@ -19,6 +19,7 @@
  *
  * Reads:  state.sel, state.week, state.range
  * Writes: range, cite, ev, tab + alertDraft ("Set alert")
+ * Download chart: opens the shared dialog (CSV / Excel / PNG).
  * DOM:    #profilePanel
  */
 import { byId, esc, onAction, safeUrl } from "../../ui/dom.js";
@@ -27,7 +28,8 @@ import { describe } from "../../model/selection.js";
 import { weekLabel, weekShort, addDays, longDate } from "../../model/weeks.js";
 import { trendSvg, RANGES, nearestIndex, TREND } from "../trendChart.js";
 import { showTip, hideTip } from "../../actions/tooltip.js";
-import { downloadSvgAsPng, slug } from "../../actions/download.js";
+import { openExport } from "../../actions/exportDialog.js";
+import { embedImage } from "../../export/pngCharts.js";
 
 const EYEBROW = { country: "SPOTLIGHT COUNTRY", region: "REGION", theme: "GLOBAL THEME", place: "COUNTRY · NO GSI" };
 
@@ -67,16 +69,26 @@ export function createProfilePanel(ctx) {
     range: (b) => store.set({ range: b.dataset.range }),
     cite: () => store.set({ cite: "page" }),
     alert: () => store.set({ tab: "alerts", alertDraft: { target: store.get().sel } }),
+    // Download: CSV / Excel (one row per week) or PNG (the chart), via the shared dialog.
     chart: () => {
       const state = store.get();
       const d = describe(ctx, state);
-      const svg = trendSvg(points, {
-        label: `Weekly GSI for ${d.name}`,
-        markers,
+      const span = `${weekShort(points[0].week)} to ${weekLabel(state.week, { upper: false, prefix: "" })}`;
+      const markedIn = (week) => markers.filter((m) => m.week === week).map((m) => `${fmtInt(m.score)} ${m.inc.title}`).join(" | ");
+      openExport({
         title: `${d.name}: weekly GSI`,
-        subtitle: `${weekShort(points[0].week)} to ${weekLabel(state.week, { upper: false, prefix: "" })} · dashed lines: incidents scored ±${cfg.trendMarkerThreshold} or more`
+        subtitle: span,
+        filename: `${d.name}-gsi-trend-${state.week}`,
+        columns: [{ label: "Week ending", width: 14 }, { label: "GSI", width: 10 }, { label: "Incidents", width: 10 }, { label: `Incidents scored ±${cfg.trendMarkerThreshold} or more`, width: 70 }],
+        rows: points.map((p) => [p.week, p.value === null ? null : Math.round(p.value * 10) / 10, p.n, markedIn(p.week)]),
+        image: () => embedImage({
+          title: `${d.name}: weekly GSI`,
+          subtitle: span,
+          note: markers.length ? `Dashed lines: incidents scored −${cfg.trendMarkerThreshold} or lower (red) or +${cfg.trendMarkerThreshold} or higher (blue).` : "",
+          svg: trendSvg(points, { label: `Weekly GSI for ${d.name}`, markers }),
+          w: TREND.W, h: TREND.H
+        })
       });
-      downloadSvgAsPng(svg, TREND.W, TREND.H + 56, `${slug(`${d.name}-gsi-trend-${state.week}`)}.png`);
     }
   });
 
