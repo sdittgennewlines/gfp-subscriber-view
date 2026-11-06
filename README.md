@@ -57,7 +57,7 @@ js/
   state.js                   what's selected; mirrors it in the address bar for share links
   data/load.js, normalize.js loading and cleaning the sheet's rows
   model/                     no DOM: gsi.js (all GSI maths), weeks.js, places.js, selection.js
-  ui/                        format.js (numbers, colours), dom.js (helpers)
+  ui/                        format.js (numbers, colours), dom.js (helpers), problems.js ("couldn't load" notices)
   actions/                   cite, share, download, exportDialog (CSV/Excel/PNG pop-up), toast, tooltip
   export/pngCharts.js        draws the PNG version of each chart (same frame + copyright on all)
   components/                titleBar, tabs, eventDetail, trendChart, reportCards (shared pieces)
@@ -66,6 +66,7 @@ js/
   lib/csv.js                 CSV parser
   lib/xlsx.js, lib/zip.js    writes Excel files (no libraries needed)
 tools/
+  stamp.mjs                  fingerprints file addresses in index.html (run before pushing code changes)
   build-data.mjs             refreshes data/ from CSV exports (Node 18+, no packages needed)
   build_map.py               one-off: Natural Earth GeoJSON → data/world.json
 ```
@@ -80,6 +81,18 @@ export function createThing(ctx) {
 ```
 
 Components never call each other. They change what's shown only through `ctx.store.set({...})`.
+
+## Updates can't blank the page
+
+Two safeguards keep one bad or outdated file from taking the whole site down:
+
+1. **Fingerprinted file addresses.** `node tools/stamp.mjs` (also `npm run stamp`) gives every script and the stylesheet an address that includes a fingerprint of its contents, e.g. `js/ui/dom.js?v=3f9a1c2e`. When a file changes, its address changes, so browsers fetch the new copy instead of mixing it with old ones from their cache.
+
+   **Run it before pushing any change to `js/`, `config.js` or `css/`.** Data refreshes don't need it.
+
+2. **Isolation.** `js/main.js` loads each part of the page (map, events, Overview, Event Feed…) separately, and draws each one inside its own error guard. If one part fails, its box shows a short "reload" notice and a banner appears at the top. Everything else keeps working, and the details go to the browser console. If the core itself can't start, `index.html` shows a "couldn't start" message instead of an empty page.
+
+When IT hosts the site, they can also serve `index.html` with `Cache-Control: no-cache`. The fingerprinted files can then be cached for as long as they like.
 
 ## Common changes
 

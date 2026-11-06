@@ -1,1 +1,9 @@
-{"type":"module","private":true,"scripts":{"build-data":"node tools/build-data.mjs","serve":"python3 -m http.server 8000"}}
+{
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build-data": "node tools/build-data.mjs",
+    "serve": "python3 -m http.server 8000",
+    "stamp": "node tools/stamp.mjs"
+  }
+}

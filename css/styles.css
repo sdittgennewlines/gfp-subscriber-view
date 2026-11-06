@@ -389,7 +389,11 @@ body { margin: 0; background: #FFFFFF; }
 .site-footer nav { display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; letter-spacing: 0.4px; }
 .site-footer a { color: #FFFFFF !important; text-decoration: none; }
 .data-note { font-size: 12px; color: var(--muted); padding: 0 0 24px; line-height: 1.6; }
-.load-error { padding: 40px 0; font-size: 16px; }
+/* Problem notices (js/ui/problems.js, index.html safety net) */
+.load-error { margin: 32px 0; padding: 20px 24px; font-size: 16px; line-height: 1.6; border-left: 4px solid #B8352B; background: #FBF1EF; }
+.problem-banner { margin-top: 16px; padding: 12px 16px; font-size: 14px; line-height: 1.6; border-left: 4px solid var(--gold); background: var(--gold-wash); }
+.problem { padding: 18px 20px; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); background: var(--wash-2); border: 1px dashed var(--line-2); }
+.gfp kbd { font-family: var(--sans); font-size: 0.9em; font-weight: 500; padding: 1px 6px; border: 1px solid var(--line-2); border-bottom-width: 2px; background: #FFFFFF; white-space: nowrap; }
 
 /* Embedded in an iframe on the New Lines site: the host page has its own header and footer. */
 .gfp.is-embed .site-header, .gfp.is-embed .site-footer { display: none; }

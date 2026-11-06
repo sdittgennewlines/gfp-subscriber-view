@@ -1,5 +1,5 @@
 /**
- * main.js: entry point. Loads the data, builds the shared context, creates
+ * main.js: entry point. Loads the data, builds the shared context, loads
  * every component and re-renders them whenever the state changes.
  *
  * HOW THE CODE IS ORGANISED
@@ -9,8 +9,9 @@
  *   js/state.js               the store (what's selected) + share links
  *   js/data/                  loading and cleaning the data
  *   js/model/                 the GSI arithmetic, weeks, places, selection: no DOM
- *   js/ui/                    formatting and DOM helpers
- *   js/actions/               cite, share, download, toast, tooltip
+ *   js/ui/                    formatting, DOM helpers, problem notices
+ *   js/actions/               cite, share, download, export dialog, toast, tooltip
+ *   js/export/                the PNG versions of charts
  *   js/components/            pieces of the page (title bar, tabs, event detail, trend chart)
  *   js/components/map/        the GSI Map screen, one file per box
  *   js/screens/               the other screens: overview, feed, reports, alerts
@@ -24,7 +25,19 @@
  *
  * Components read from `ctx` (data + helpers, below) and `state`, and change
  * what's shown only by calling ctx.store.set({...}). To add a component,
- * write it in that shape and add it to the `components` list below.
+ * write it in that shape and add a line to COMPONENTS below.
+ *
+ * ONE BROKEN PART NEVER BLANKS THE PAGE
+ *
+ *   - main.js itself only imports the small, stable core (data, state, GSI
+ *     maths). Every component is loaded separately (dynamic import), so if
+ *     one fails to load (a bug, or a browser holding an old copy of a file
+ *     right after an update) only its box shows a "reload" notice
+ *     (ui/problems.js) and the rest of the page works.
+ *   - Each component's set-up and each render run inside try/catch, so an
+ *     error while drawing one box doesn't stop the others.
+ *   - If even the core can't start, index.html shows a message explaining
+ *     how to reload, instead of an empty page.
  */
 import { CONFIG } from "../config.js";
 import { loadAll } from "./data/load.js";
@@ -34,21 +47,39 @@ import { createPlaces } from "./model/places.js";
 import { validSel } from "./model/selection.js";
 import { byId } from "./ui/dom.js";
 import { longDate } from "./model/weeks.js";
+import { reportProblem } from "./ui/problems.js";
 
-import { createTitleBar } from "./components/titleBar.js";
-import { createTabs } from "./components/tabs.js";
-import { createMapToolbar } from "./components/map/toolbar.js";
-import { createWorldMap } from "./components/map/worldMap.js";
-import { createEventsPanel } from "./components/map/eventsPanel.js";
-import { createProfilePanel } from "./components/map/profilePanel.js";
-import { createRankTable } from "./components/map/rankTable.js";
-import { createReportsStrip } from "./components/map/reportsStrip.js";
-import { createOverview } from "./screens/overview.js";
-import { createFeed } from "./screens/feed.js";
-import { createReports } from "./screens/reports.js";
-import { createAlerts } from "./screens/alerts.js";
-import { createCiteDialog } from "./actions/cite.js";
-import { initExportDialog } from "./actions/exportDialog.js";
+// Tell index.html's safety net that the core loaded (see the script there),
+// and clear its message if a slow connection made it appear early.
+window.gfpStarted = true;
+byId("loadError").hidden = true;
+
+/**
+ * Every component, in no particular order (each owns its own part of the page).
+ *   file  module to load (relative to this file)
+ *   make  the function it exports
+ *   el    the element it fills: where its "couldn't load" notice goes
+ *   tab   only render while that tab is showing (saves work on hidden screens)
+ *   init  true = a set-up function with no render (the Download pop-up)
+ *   quiet true = has no box of its own (dialogs): if it fails, only the top
+ *         banner appears
+ */
+const COMPONENTS = [
+  { file: "./components/titleBar.js", make: "createTitleBar", el: "titleBar", name: "Title bar" },
+  { file: "./components/tabs.js", make: "createTabs", el: "tabs", name: "Tabs" },
+  { file: "./components/map/toolbar.js", make: "createMapToolbar", el: "mapToolbar", tab: "map", name: "Map toolbar" },
+  { file: "./components/map/worldMap.js", make: "createWorldMap", el: "mapPanel", tab: "map", name: "Map" },
+  { file: "./components/map/eventsPanel.js", make: "createEventsPanel", el: "eventsPanel", tab: "map", name: "Events" },
+  { file: "./components/map/profilePanel.js", make: "createProfilePanel", el: "profilePanel", tab: "map", name: "Profile" },
+  { file: "./components/map/rankTable.js", make: "createRankTable", el: "rankTable", tab: "map", name: "Ranking table" },
+  { file: "./components/map/reportsStrip.js", make: "createReportsStrip", el: "reportsStrip", tab: "map", name: "Reports strip" },
+  { file: "./screens/overview.js", make: "createOverview", el: "screen-overview", tab: "overview", name: "Overview" },
+  { file: "./screens/feed.js", make: "createFeed", el: "screen-feed", tab: "feed", name: "Event Feed" },
+  { file: "./screens/reports.js", make: "createReports", el: "screen-reports", tab: "reports", name: "Reports" },
+  { file: "./screens/alerts.js", make: "createAlerts", el: "screen-alerts", tab: "alerts", name: "Alerts" },
+  { file: "./actions/cite.js", make: "createCiteDialog", el: "dialogRoot", name: "Citations", quiet: true },
+  { file: "./actions/exportDialog.js", make: "initExportDialog", el: "exportRoot", name: "Downloads", init: true, quiet: true }
+];
 
 const app = byId("app");
 
@@ -60,6 +91,18 @@ const postHeight = () => {
   if (!embedded || window.parent === window) return;
   try { window.parent.postMessage({ type: "gfp:height", height: document.documentElement.scrollHeight }, "*"); } catch { /* ignore */ }
 };
+
+/** Load one component's module and set it up. Returns null (and shows a notice) if that fails. */
+async function loadComponent(spec, ctx) {
+  try {
+    const mod = await import(spec.file);
+    const made = mod[spec.make](ctx);
+    return spec.init ? { render() {} } : made;
+  } catch (err) {
+    reportProblem(spec, err);
+    return null;
+  }
+}
 
 async function start() {
   // 1. Data.
@@ -101,29 +144,24 @@ async function start() {
     types: data.types,
     asOf: data.asOf
   };
-
-  // 5. Components. Order doesn't matter: each owns its own part of the page.
   byId("subscriberName").textContent = CONFIG.subscriberName;
-  initExportDialog(); // the shared Download pop-up (CSV / Excel / PNG)
-  //    `tab` = only render while that tab is showing (saves work on hidden screens).
-  const components = [
-    { make: createTitleBar },
-    { make: createTabs },
-    { make: createMapToolbar, tab: "map" },
-    { make: createWorldMap, tab: "map" },
-    { make: createEventsPanel, tab: "map" },
-    { make: createProfilePanel, tab: "map" },
-    { make: createRankTable, tab: "map" },
-    { make: createReportsStrip, tab: "map" },
-    { make: createOverview, tab: "overview" },
-    { make: createFeed, tab: "feed" },
-    { make: createReports, tab: "reports" },
-    { make: createAlerts, tab: "alerts" },
-    { make: createCiteDialog }
-  ].map((c) => ({ ...c, instance: c.make(ctx) }));
 
+  // 5. Components, all loaded in parallel; any that fail are left out.
+  const loaded = await Promise.all(COMPONENTS.map(async (spec) => ({ spec, instance: await loadComponent(spec, ctx) })));
+  const components = loaded.filter((c) => c.instance);
+
+  const tabsMissing = !components.some((c) => c.spec.make === "createTabs");
   const renderAll = (state) => {
-    for (const c of components) if (!c.tab || c.tab === state.tab) c.instance.render(state);
+    // Without the tab bar, still show the right screen.
+    if (tabsMissing) for (const id of ["overview", "map", "feed", "reports", "alerts"]) byId(`screen-${id}`).hidden = id !== state.tab;
+    for (const c of components) {
+      if (c.spec.tab && c.spec.tab !== state.tab) continue;
+      try {
+        c.instance.render(state);
+      } catch (err) {
+        reportProblem(c.spec, err); // this box shows a notice; the others carry on
+      }
+    }
     postHeight();
   };
   store.subscribe(renderAll);
