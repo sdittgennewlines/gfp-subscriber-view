@@ -11,7 +11,7 @@
  *   ├────────────────────────────────┼────────────────────────────────┤
  *   │ What happened       [Download] │ Escalation balance         [⤓] │
  *   ├────────────────────────────────┴────────────────────────────────┤
- *   │ The last 8 weeks at a glance                         [Download] │
+ *   │ GSI over time: last week / quarter / all time        [Download] │
  *   └─────────────────────────────────────────────────────────────────┘
  *
  * HOW EACH CHART IS BUILT
@@ -38,11 +38,10 @@ import { fmt, fmtInt, fmtChange, fill, ink, badgeStyle, plural } from "../ui/for
 import { addDays, shortDate, weekShort, weekLabel } from "../model/weeks.js";
 import { reportCards } from "../components/reportCards.js";
 import { openExport, downloadButton } from "../actions/exportDialog.js";
-import { tableImage, barsImage, stackedImage, heatImage } from "../export/pngCharts.js";
+import { tableImage, barsImage, stackedImage } from "../export/pngCharts.js";
 
 const KEY_INCIDENTS = 8; // how many key incidents to list
 const MOVERS = 6; // how many biggest movers
-const HEAT_WEEKS = 8; // columns in the heat table
 const BALANCE_WEEKS = 12; // weeks in the escalation-balance chart
 const CATEGORY_COLOURS = ["#1B1725", "#7A6528", "#BFA359", "#8C8A91", "#DCDAD3"];
 const SCENARIO_COLOURS = { Escalation: "#C4483B", "Status quo": "#ADA2D3", "De-escalation": "#3D6FB0" };
@@ -117,15 +116,6 @@ export function createOverview(ctx) {
     const verdict = !now || now.esc + now.de === 0 ? "No escalations or de-escalations this week."
       : `This week ${Math.round(share(now) * 100)}% of escalation/de-escalation incidents were escalations, ${share(now) > avg + 0.05 ? "above" : share(now) < avg - 0.05 ? "below" : "close to"} the ${data.length - 1}-week average of ${Math.round(avg * 100)}%.`;
     return { data, share, verdict };
-  }
-
-  function heatData(week) {
-    const weeks = gsi.weeks.filter((w) => w <= week).slice(-HEAT_WEEKS);
-    const groups = [["SPOTLIGHT COUNTRIES", "country"], ["REGIONS", "region"], ["GLOBAL THEMES", "theme"]].map(([label, level]) => ({
-      label, level,
-      rows: gsi.ranking(level, week).map((r) => ({ e: r.entity, values: weeks.map((w) => gsi.value(r.entity.key, w).value) }))
-    }));
-    return { weeks, groups };
   }
 
   /* ================================================== HTML (the page) */
@@ -225,20 +215,6 @@ export function createOverview(ctx) {
       <span class="mix-legend" style="margin-top:8px">${Object.entries(SCENARIO_COLOURS).map(([s, c]) => `<span><i style="background:${c}"></i>${s}</span>`).join("")}</span>`);
   }
 
-  function heatHtml({ weeks, groups }) {
-    const row = ({ e, values }) => `<tr><th class="rowh" scope="row"><button class="link" data-action="entity" data-key="${e.key}" style="background:none;border:none;padding:0;cursor:pointer;font:inherit;text-align:left">${esc(e.name)}</button></th>${values.map((v, i) => {
-      const w = weeks[i];
-      const label = `${e.name}, ${weekShort(w)}: ${v === null ? "no incidents" : "GSI " + fmt(v)}`;
-      return `<td><button data-action="entity" data-key="${e.key}" data-week="${w}" aria-label="${esc(label)}" title="${esc(label)}" ${v === null ? 'class="blank">·' : `style="background:${fill(v)};color:${Math.abs(v) >= 40 ? "#FFFFFF" : "#1B1725"}">${fmtInt(v)}`}</button></td>`;
-    }).join("")}</tr>`;
-    return box("heat", `The last ${HEAT_WEEKS} weeks at a glance`, `
-      <div class="heat"><table>
-        <thead><tr><th></th>${weeks.map((w) => `<th scope="col">${weekShort(w)}</th>`).join("")}</tr></thead>
-        <tbody>${groups.map((g) => `<tr><th colspan="${weeks.length + 1}" style="text-align:left;padding-top:14px;color:var(--gold-ink)">${g.label}</th></tr>` + g.rows.map(row).join("")).join("")}</tbody>
-      </table></div>
-      <span style="font-size:12px;color:var(--muted);margin-top:8px">Rows sorted by this week's GSI. Select any cell to open that country or region on the GSI Map for that week.</span>`);
-  }
-
   /* ============================================ DOWNLOADS (one spec per chart) */
 
   function buildSpecs(week, d) {
@@ -292,16 +268,6 @@ export function createOverview(ctx) {
             { value: x.de, colour: SCENARIO_COLOURS["De-escalation"] }, { value: x.sq, colour: SCENARIO_COLOURS["Status quo"] }, { value: x.esc, colour: SCENARIO_COLOURS.Escalation }] })),
           legend: Object.entries(SCENARIO_COLOURS).map(([label, colour]) => ({ label, colour }))
         })
-      },
-      heat: {
-        title: `The last ${HEAT_WEEKS} weeks at a glance`, subtitle: `Weekly GSI, ${weekShort(d.heat.weeks[0])} to ${wk.replace(/^Week of /, "")}`, filename: file("gsi-last-8-weeks"),
-        columns: [{ label: "Name", width: 28 }, { label: "Kind", width: 14 }, ...d.heat.weeks.map((w) => ({ label: `Week ending ${w}`, width: 20 }))],
-        rows: d.heat.groups.flatMap((g) => g.rows.map((r) => [r.e.name, KIND[r.e.level], ...r.values.map(r1)])),
-        image: () => heatImage({
-          title: `The last ${HEAT_WEEKS} weeks at a glance`, subtitle: `Weekly GSI · blank = no incidents that week`,
-          weeks: d.heat.weeks.map(weekShort),
-          groups: d.heat.groups.map((g) => ({ label: g.label, rows: g.rows.map((r) => ({ name: r.e.name, values: r.values })) }))
-        })
       }
     };
   }
@@ -315,8 +281,7 @@ export function createOverview(ctx) {
       movers: moversData(week),
       regions: regionsData(week),
       categories: categoryData(weekIncs),
-      balance: balanceData(week),
-      heat: heatData(week)
+      balance: balanceData(week)
     };
     specs = buildSpecs(week, d);
     el.innerHTML = `
@@ -325,7 +290,7 @@ export function createOverview(ctx) {
       ${keyIncidentsHtml(d.keyIncidents)}
       <div class="ov-pair">${moversHtml(d.movers)}${regionsHtml(d.regions)}</div>
       <div class="ov-pair">${categoryHtml(d.categories)}${balanceHtml(week, d.balance)}</div>
-      ${heatHtml(d.heat)}`;
+      <div id="gsiOverTime"></div>`; // filled by components/gsiOverTime.js (its own component)
   }
 
   return { render };

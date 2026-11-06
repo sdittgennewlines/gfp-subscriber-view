@@ -293,6 +293,27 @@ body { margin: 0; background: #FFFFFF; }
 .bal-col.on .bal-stack { outline: 2px solid var(--ink); outline-offset: 1px; }
 .bal-x { position: absolute; bottom: -18px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 .bal + .mix-legend { margin-top: 26px !important; }
+
+/* GSI over time (components/gsiOverTime.js) */
+.got-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 6px; }
+.got-group, .heat th.got-group-th { padding: 14px 0 6px; font-size: 12px; font-weight: 500; letter-spacing: 0.8px; color: var(--gold-ink); text-align: left; }
+.got-group { border-bottom: 1px solid var(--line); }
+.got-bar-row { display: flex; gap: 16px; align-items: center; width: 100%; padding: 8px 4px; border: none; border-bottom: 1px solid var(--line-3); background: #FFFFFF; cursor: pointer; font-size: 14px; font-weight: 300; text-align: left; }
+.got-bar-row:hover { background: var(--wash-2); }
+.got-bar-head { cursor: default; font-size: 11.5px; font-weight: 500; letter-spacing: 0.6px; color: var(--ink-2); border-bottom: 1px solid var(--ink); }
+.got-bar-head:hover { background: #FFFFFF; }
+.got-bar-head .c-bar { background: none; height: auto; text-align: center; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.heat .rowh .link { background: none; border: none; padding: 0; cursor: pointer; font: inherit; text-align: left; }
+.got-strip { display: grid; column-gap: 1px; row-gap: 2px; align-items: center; font-size: 12.5px; }
+.got-h { font-size: 10.5px; font-weight: 500; color: var(--ink-2); white-space: nowrap; overflow: visible; height: 16px; }
+.got-gl { padding: 10px 0 4px; font-size: 11.5px; font-weight: 500; letter-spacing: 0.8px; color: var(--gold-ink); }
+.got-name { background: none; border: none; padding: 0 8px 0 0; text-align: left; cursor: pointer; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.got-c { display: block; height: 20px; cursor: pointer; }
+.got-c.blank { background: #FFFFFF; outline: 1px dashed var(--line-2); outline-offset: -2px; }
+.got-c:hover { outline: 2px solid var(--ink); outline-offset: -1px; position: relative; z-index: 1; }
+.got-key { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.got-key i { display: inline-block; width: 20px; height: 10px; }
+.got-key span { margin-left: 10px; }
 @media (max-width: 900px) {
   .ov-top, .ov-pair { grid-template-columns: minmax(0, 1fr); }
   .key-grid { grid-template-columns: minmax(0, 1fr); }

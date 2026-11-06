@@ -20,7 +20,8 @@
  *   tableImage   rows of text, with optional GSI badges and change arrows
  *   barsImage    horizontal bars (incidents by category)
  *   stackedImage stacked columns (escalation balance)
- *   heatImage    coloured grid (the last 8 weeks at a glance)
+ *   heatImage    coloured grid (GSI over time), adapting to the number of columns
+ *   divergingImage bars left/right of zero (ranking table, one-week GSI over time)
  *   embedImage   any existing SVG (the trend chart) placed in the frame
  */
 import { CONFIG } from "../../config.js";
@@ -161,14 +162,26 @@ export function stackedImage({ title, subtitle, columns, legend, note = "", widt
   return frame({ title, subtitle, width, bodyHeight: legendY + 10, body: noteText + grid.join("") + `<line x1="${left}" y1="${y(0)}" x2="${width - M}" y2="${y(0)}" stroke="#1B1725"/>` + cols + leg });
 }
 
-/** Coloured grid. weeks: column labels; groups: [{ label, rows: [{ name, values: [number|null] }] }] */
-export function heatImage({ title, subtitle, weeks, groups }) {
+/**
+ * Coloured grid: one row per entity, one column per period.
+ *   columns: period labels (e.g. "Oct 24–30" or "Oct 2026")
+ *   groups:  [{ label, rows: [{ name, values: [number|null] }] }]
+ * The cell width adapts to the number of columns so the image stays a
+ * readable size: wide cells show the number, narrow ones show colour only
+ * (the CSV/Excel download has the numbers), and only every few column
+ * labels are printed.
+ */
+export function heatImage({ title, subtitle, columns, groups }) {
   const nameW = 210;
-  const cellW = 78;
+  const n = columns.length;
+  const cellW = Math.max(9, Math.min(78, Math.floor(1100 / n)));
+  const showNumbers = cellW >= 40;
+  const labelEvery = Math.ceil(70 / cellW); // keep column labels from overlapping
   const cellH = 24;
-  const width = M * 2 + nameW + weeks.length * cellW;
+  const width = M * 2 + nameW + n * cellW;
   let y = 24;
-  const header = weeks.map((w, i) => `<text x="${M + nameW + i * cellW + cellW / 2}" y="12" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3E3A46">${xml(w)}</text>`).join("");
+  const header = columns.map((c, i) => (i % labelEvery === 0 || i === n - 1)
+    ? `<text x="${M + nameW + i * cellW + cellW / 2}" y="12" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3E3A46">${xml(c)}</text>` : "").join("");
   const parts = [];
   for (const g of groups) {
     y += 8;
@@ -178,14 +191,70 @@ export function heatImage({ title, subtitle, weeks, groups }) {
       parts.push(`<text x="${M}" y="${y + 16}" font-size="12.5" fill="#1B1725">${xml(fit(r.name, nameW - 10, 12.5))}</text>`);
       r.values.forEach((v, i) => {
         const x = M + nameW + i * cellW;
-        parts.push(v === null
-          ? `<rect x="${x + 2}" y="${y + 2}" width="${cellW - 4}" height="${cellH - 4}" fill="#FFFFFF" stroke="#CFCCC4" stroke-dasharray="3 2"/><text x="${x + cellW / 2}" y="${y + 16}" text-anchor="middle" font-size="11" fill="#8C8A91">–</text>`
-          : `<rect x="${x + 1}" y="${y + 1}" width="${cellW - 2}" height="${cellH - 2}" fill="${fill(v)}"/><text x="${x + cellW / 2}" y="${y + 16}" text-anchor="middle" font-size="11" font-weight="700" fill="${Math.abs(v) >= 40 ? "#FFFFFF" : "#1B1725"}">${fmtInt(v)}</text>`);
+        const gap = showNumbers ? 1 : 0.5;
+        if (v === null) {
+          parts.push(`<rect x="${x + gap}" y="${y + 2}" width="${cellW - 2 * gap}" height="${cellH - 4}" fill="#FFFFFF" stroke="#CFCCC4" stroke-dasharray="${showNumbers ? "3 2" : "1 1"}"/>`);
+        } else {
+          parts.push(`<rect x="${x + gap}" y="${y + 1}" width="${cellW - 2 * gap}" height="${cellH - 2}" fill="${fill(v)}"/>`);
+          if (showNumbers) parts.push(`<text x="${x + cellW / 2}" y="${y + 16}" text-anchor="middle" font-size="11" font-weight="700" fill="${Math.abs(v) >= 40 ? "#FFFFFF" : "#1B1725"}">${fmtInt(v)}</text>`);
+        }
       });
       y += cellH;
     }
   }
-  return frame({ title, subtitle, width, bodyHeight: y + 8, body: header + parts.join("") });
+  // Colour key under compact grids, since the cells carry no numbers.
+  let key = "";
+  if (!showNumbers) {
+    y += 22;
+    key = `<text x="${M}" y="${y}" font-size="11.5" fill="#3E3A46">Destabilizing</text>` +
+      CONFIG.scale.map((s, i) => `<rect x="${M + 90 + i * 26}" y="${y - 10}" width="24" height="12" fill="${s.fill}"/>`).join("") +
+      `<text x="${M + 90 + CONFIG.scale.length * 26 + 6}" y="${y}" font-size="11.5" fill="#3E3A46">Stabilizing · dashed = no incidents</text>`;
+  }
+  return frame({ title, subtitle, width: Math.max(width, 640), bodyHeight: y + 12, body: header + parts.join("") + key });
+}
+
+/**
+ * Diverging bars: one row per entity, a bar left (destabilizing) or right
+ * (stabilizing) of a centre line, with the value, the change and the count.
+ *   groups: [{ label?, rows: [{ name, value, change, n }] }]
+ * Used for the ranking table and for a one-week "GSI over time".
+ */
+export function divergingImage({ title, subtitle, groups }) {
+  const nameW = 220;
+  const barW = 420;
+  const width = M * 2 + nameW + barW + 300;
+  const mid = M + nameW + barW / 2;
+  const rowH = 28;
+  let y = 4;
+  const parts = [
+    `<text x="${M}" y="14" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3E3A46">NAME</text>`,
+    `<text x="${mid}" y="14" text-anchor="middle" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3E3A46">← DESTABILIZING · STABILIZING →</text>`,
+    `<text x="${M + nameW + barW + 80}" y="14" text-anchor="end" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3E3A46">GSI</text>`,
+    `<text x="${M + nameW + barW + 190}" y="14" text-anchor="end" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3E3A46">VS LAST WEEK</text>`,
+    `<text x="${width - M}" y="14" text-anchor="end" font-size="11" font-weight="700" letter-spacing="0.6" fill="#3E3A46">INCIDENTS</text>`
+  ];
+  y = 24;
+  const top = y;
+  for (const g of groups) {
+    if (g.label) {
+      y += 8;
+      parts.push(`<text x="${M}" y="${y + 12}" font-size="10.5" font-weight="700" letter-spacing="0.6" fill="#7A6528">${xml(g.label)}</text>`);
+      y += 18;
+    }
+    for (const r of g.rows) {
+      const v = r.value;
+      const w = v === null ? 0 : (Math.min(Math.abs(v), 60) / 60) * (barW / 2);
+      parts.push(`<text x="${M}" y="${y + 18}" font-size="13" fill="#1B1725">${xml(fit(r.name, nameW - 10))}</text>`);
+      if (v !== null) parts.push(`<rect x="${v < 0 ? mid - w : mid}" y="${y + 7}" width="${Math.max(w, 1)}" height="14" fill="${fill(v)}"/>`);
+      parts.push(`<text x="${M + nameW + barW + 80}" y="${y + 18}" text-anchor="end" font-size="13" font-weight="700" fill="${ink(v)}">${fmt(v)}</text>`);
+      parts.push(`<text x="${M + nameW + barW + 190}" y="${y + 18}" text-anchor="end" font-size="13" fill="#3E3A46">${fmtChange(r.change)}</text>`);
+      parts.push(`<text x="${width - M}" y="${y + 18}" text-anchor="end" font-size="13" fill="#3E3A46">${r.n ?? ""}</text>`);
+      parts.push(`<line x1="${M}" y1="${y + rowH}" x2="${width - M}" y2="${y + rowH}" stroke="#ECEAE4"/>`);
+      y += rowH;
+    }
+  }
+  parts.push(`<line x1="${mid}" y1="${top}" x2="${mid}" y2="${y}" stroke="#8C8A91"/>`);
+  return frame({ title, subtitle, width, bodyHeight: y + 8, body: parts.join("") });
 }
 
 /** Place an existing SVG chart (e.g. the trend chart) in the frame, scaled up. */

@@ -74,6 +74,8 @@ const COMPONENTS = [
   { file: "./components/map/rankTable.js", make: "createRankTable", el: "rankTable", tab: "map", name: "Ranking table" },
   { file: "./components/map/reportsStrip.js", make: "createReportsStrip", el: "reportsStrip", tab: "map", name: "Reports strip" },
   { file: "./screens/overview.js", make: "createOverview", el: "screen-overview", tab: "overview", name: "Overview" },
+  // Must come after the Overview: it fills a box the Overview draws.
+  { file: "./components/gsiOverTime.js", make: "createGsiOverTime", el: "gsiOverTime", tab: "overview", name: "GSI over time" },
   { file: "./screens/feed.js", make: "createFeed", el: "screen-feed", tab: "feed", name: "Event Feed" },
   { file: "./screens/reports.js", make: "createReports", el: "screen-reports", tab: "reports", name: "Reports" },
   { file: "./screens/alerts.js", make: "createAlerts", el: "screen-alerts", tab: "alerts", name: "Alerts" },

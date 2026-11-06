@@ -97,7 +97,7 @@ export function openExport(spec) {
         <div class="export-opts">
           ${option("csv", "CSV", "The data, for any spreadsheet or data tool")}
           ${option("xlsx", "Excel", "The data as an .xlsx workbook")}
-          ${spec.image ? option("png", "PNG image", `The chart as a picture, with ${esc(CONFIG.copyright)}`) : ""}
+          ${spec.image ? option("png", "PNG image", "The chart as a picture") : ""}
         </div>
       </div>
     </div>`;

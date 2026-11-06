@@ -8,6 +8,8 @@
  * At the "Regions & themes" level the table has two sorted groups, Regions
  * then Global themes, so the two kinds are never ranked against each other.
  *
+ * Download: the table as CSV / Excel, or as a diverging-bar picture (PNG).
+ *
  * Reads:  state.level, state.sel, state.week
  * Writes: sel, ev
  * DOM:    #rankTable
@@ -15,12 +17,39 @@
 import { byId, esc, onAction } from "../../ui/dom.js";
 import { fmt, fmtChange, fill, ink } from "../../ui/format.js";
 import { weekLabel } from "../../model/weeks.js";
+import { openExport, downloadButton } from "../../actions/exportDialog.js";
+import { divergingImage } from "../../export/pngCharts.js";
+
+const KIND = { country: "Country", region: "Region", theme: "Global theme" };
+const r1 = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
 
 export function createRankTable(ctx) {
   const { store, gsi } = ctx;
   const el = byId("rankTable");
 
+  /** The groups shown for a state: one (countries) or two (regions, then themes). */
+  const groupsFor = (state) => (state.level === "region"
+    ? [["REGIONS", gsi.ranking("region", state.week)], ["GLOBAL THEMES", gsi.ranking("theme", state.week)]]
+    : [[null, gsi.ranking("country", state.week)]]);
+
+  /** Download spec for the table as currently shown. */
+  function spec(state) {
+    const regionMode = state.level === "region";
+    const groups = groupsFor(state);
+    const title = regionMode ? "All regions and themes this week" : "All spotlight countries this week";
+    const subtitle = `${weekLabel(state.week, { upper: false })} · most destabilized first`;
+    return {
+      title, subtitle,
+      filename: `${regionMode ? "regions-and-themes" : "spotlight-countries"}-ranking-${state.week}`,
+      columns: [{ label: regionMode ? "Region / theme" : "Country", width: 28 }, ...(regionMode ? [{ label: "Kind", width: 14 }] : []),
+        { label: "GSI", width: 10 }, { label: "Change vs last week", width: 20 }, { label: "Incidents", width: 10 }],
+      rows: groups.flatMap(([, rows]) => rows.map((r) => [r.entity.name, ...(regionMode ? [KIND[r.entity.level]] : []), r1(r.value), r1(r.change), r.n])),
+      image: () => divergingImage({ title, subtitle, groups: groups.map(([label, rows]) => ({ label, rows: rows.map((r) => ({ name: r.entity.name, value: r.value, change: r.change, n: r.n })) })) })
+    };
+  }
+
   onAction(el, {
+    download: () => openExport(spec(store.get())),
     pick: (b) => {
       store.set({ sel: b.dataset.key, ev: null });
       byId("screen-map").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -42,14 +71,12 @@ export function createRankTable(ctx) {
 
   function render(state) {
     const regionMode = state.level === "region";
-    const groups = regionMode
-      ? [["REGIONS", gsi.ranking("region", state.week)], ["GLOBAL THEMES", gsi.ranking("theme", state.week)]]
-      : [[null, gsi.ranking("country", state.week)]];
+    const groups = groupsFor(state);
 
     el.innerHTML = `
       <div class="hd">
         <h2 class="section-h2">${regionMode ? "All regions and themes this week" : "All spotlight countries this week"}</h2>
-        <span style="font-size:13px;color:var(--muted)">Sorted from most destabilized to most stabilized${regionMode ? " within each group" : ""} · select a row to open it</span>
+        <span style="display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted)">Sorted from most destabilized to most stabilized${regionMode ? " within each group" : ""} · select a row to open it ${downloadButton("ranking")}</span>
       </div>
       <div class="rank-table" role="group" aria-label="Ranking">
         <div class="rank-cols">
