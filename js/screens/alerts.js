@@ -86,7 +86,7 @@ export function createAlerts(ctx) {
     // Re-draw on first visit, after a change here, or when "Set alert" sent a new target.
     if (!force && lastDraft === state.alertDraft && el.innerHTML) return;
     lastDraft = state.alertDraft;
-    const draftKey = state.alertDraft?.target && gsi.entity(state.alertDraft.target) ? state.alertDraft.target : "Sudan";
+    const draftKey = state.alertDraft?.target && gsi.entity(state.alertDraft.target) ? state.alertDraft.target : cfg.defaultSelection.country;
 
     el.innerHTML = `
       <div class="preview-note"><b style="font-weight:500">Preview.</b> This shows how alerts will work for subscribers. Alerts you create here aren't saved or sent yet; delivery will be set up with subscriber accounts.</div>

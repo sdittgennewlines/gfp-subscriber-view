@@ -70,7 +70,7 @@ async function start() {
 
   // 3. State, starting from the latest week; a shared link can override any of it.
   const store = createStore({
-    tab: "map",
+    tab: "overview", // the page opens on the Overview
     level: "country",
     sel: CONFIG.defaultSelection.country,
     week: gsi.latestWeek,
@@ -84,7 +84,7 @@ async function start() {
   const s = store.get();
   const week = s.week >= gsi.weeks[0] && s.week <= gsi.latestWeek && gsi.weeks.includes(s.week) ? s.week : gsi.latestWeek;
   const level = s.level === "region" ? "region" : "country";
-  store.set({ level, week, sel: validSel({ gsi, places, cfg: CONFIG }, level, s.sel), tab: ["overview", "map", "feed", "reports", "alerts"].includes(s.tab) ? s.tab : "map" });
+  store.set({ level, week, sel: validSel({ gsi, places, cfg: CONFIG }, level, s.sel), tab: ["overview", "map", "feed", "reports", "alerts"].includes(s.tab) ? s.tab : "overview" });
 
   // 4. The shared context every component receives.
   const ctx = {

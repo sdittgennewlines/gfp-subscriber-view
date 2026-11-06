@@ -116,8 +116,9 @@ export const CONFIG = {
     { key: "Climate", name: "Global Climate", level: "theme", check: "Global Climate", score: "GSI Climate", note: "Climate-related stability worldwide" }
   ],
 
-  // Country selected when the page first loads.
-  defaultSelection: { country: "Sudan", region: "MENA" },
+  // What the GSI Map shows first: the country at "Country level" and the
+  // region at "Regions & themes". (The page itself opens on the Overview tab.)
+  defaultSelection: { country: "US", region: "MENA" },
 
   /* ============================================================== PLACES */
 
