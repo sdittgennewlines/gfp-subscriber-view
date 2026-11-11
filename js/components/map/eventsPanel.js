@@ -62,7 +62,7 @@ export function createEventsPanel(ctx) {
       const xl = crossLinkFor(ctx.cfg, inc);
       const badge = score !== null
         ? `<span class="badge" style="${badgeStyle(score)}">${fmtInt(score)}</span>`
-        : `<span class="badge neutral">${d.hasGsi ? "Not scored" : esc(inc.severity || "–")}</span>`;
+        : `<span class="badge neutral">${d.hasGsi ? "Not scored" : esc(inc.label || "–")}</span>`;
       return `<button class="ev-row${xl ? " xl" : ""}" data-action="pick" data-id="${inc.id}" aria-pressed="false" style="border-left-color:${edge(score)}">
         <span class="top"><span>${shortDate(inc.date)} · ${esc(inc.type)}</span>${badge}</span>
         <span class="t">${esc(inc.title)}</span>

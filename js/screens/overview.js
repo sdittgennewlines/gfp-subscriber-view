@@ -9,7 +9,7 @@
  *   ├────────────────────────────────┬────────────────────────────────┤
  *   │ Biggest movers      [Download] │ Regions and global themes  [⤓] │
  *   ├────────────────────────────────┼────────────────────────────────┤
- *   │ What happened       [Download] │ Escalation balance         [⤓] │
+ *   │ What happened       [Download] │ Stability balance          [⤓] │
  *   ├────────────────────────────────┴────────────────────────────────┤
  *   │ GSI over time: last week / quarter / all time        [Download] │
  *   └─────────────────────────────────────────────────────────────────┘
@@ -24,7 +24,7 @@
  *
  * "Key incidents" are picked automatically until the sheet has a Featured
  * column: the week's incidents with the largest headline scores (either
- * direction), ties broken by severity, repeats skipped.
+ * direction), ties broken by date, repeats skipped.
  *
  * Everything links into the other tabs: a country opens it on the GSI Map,
  * an incident opens it in the Event Feed.
@@ -42,9 +42,11 @@ import { tableImage, barsImage, stackedImage } from "../export/pngCharts.js";
 
 const KEY_INCIDENTS = 8; // how many key incidents to list
 const MOVERS = 6; // how many biggest movers
-const BALANCE_WEEKS = 12; // weeks in the escalation-balance chart
+const BALANCE_WEEKS = 12; // weeks in the stability-balance chart
 const CATEGORY_COLOURS = ["#1B1725", "#7A6528", "#BFA359", "#8C8A91", "#DCDAD3"];
-const SCENARIO_COLOURS = { Escalation: "#C4483B", "Status quo": "#ADA2D3", "De-escalation": "#3D6FB0" };
+// Direction of each incident's headline GSI (whatever the level's words:
+// destabilization/escalation/disruption are all "Destabilizing").
+const DIRECTION_COLOURS = { Destabilizing: "#C4483B", "Status quo": "#ADA2D3", Stabilizing: "#3D6FB0" };
 const KIND = { country: "Country", region: "Region", theme: "Global theme" };
 
 // Round for downloads: one decimal, as shown on the page.
@@ -53,7 +55,6 @@ const r1 = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 1
 export function createOverview(ctx) {
   const { cfg, store, gsi, incidents, reports } = ctx;
   const el = byId("screen-overview");
-  const sevRank = (s) => cfg.severities.indexOf(s);
   const inWeek = (week) => incidents.filter((i) => i.week === week);
   let specs = {}; // download specs for the current week, by chart id
 
@@ -82,7 +83,7 @@ export function createOverview(ctx) {
   function keyIncidentsData(weekIncs) {
     const seen = new Set(); // skip repeats: the sheet sometimes records one event twice under different types
     return [...weekIncs]
-      .sort((a, b) => Math.abs(b.gsi ?? 0) - Math.abs(a.gsi ?? 0) || sevRank(b.severity) - sevRank(a.severity))
+      .sort((a, b) => Math.abs(b.gsi ?? 0) - Math.abs(a.gsi ?? 0) || (a.date < b.date ? 1 : -1))
       .filter((i) => { const k = i.title.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
       .slice(0, KEY_INCIDENTS);
   }
@@ -103,18 +104,19 @@ export function createOverview(ctx) {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([category, n], i) => ({ category, n, colour: CATEGORY_COLOURS[i % CATEGORY_COLOURS.length] }));
   }
 
+  // Per week: destabilizing (esc), status quo (sq) and stabilizing (de) incidents.
   function balanceData(week) {
     const weeks = gsi.weeks.filter((w) => w <= week).slice(-BALANCE_WEEKS);
     const data = weeks.map((w) => {
       const incs = inWeek(w);
-      const count = (s) => incs.filter((i) => i.scenario === s).length;
-      return { w, esc: count("Escalation"), sq: count("Status quo"), de: count("De-escalation") };
+      const count = (s) => incs.filter((i) => i.direction === s).length;
+      return { w, esc: count("Destabilizing"), sq: count("Status quo"), de: count("Stabilizing") };
     });
     const share = (d) => (d.esc + d.de ? d.esc / (d.esc + d.de) : 0);
     const now = data[data.length - 1];
     const avg = data.slice(0, -1).reduce((s, d) => s + share(d), 0) / Math.max(1, data.length - 1);
-    const verdict = !now || now.esc + now.de === 0 ? "No escalations or de-escalations this week."
-      : `This week ${Math.round(share(now) * 100)}% of escalation/de-escalation incidents were escalations, ${share(now) > avg + 0.05 ? "above" : share(now) < avg - 0.05 ? "below" : "close to"} the ${data.length - 1}-week average of ${Math.round(avg * 100)}%.`;
+    const verdict = !now || now.esc + now.de === 0 ? "No incidents moved the GSI this week."
+      : `This week ${Math.round(share(now) * 100)}% of the incidents that moved the GSI were destabilizing (destabilization, escalation or disruption), ${share(now) > avg + 0.05 ? "above" : share(now) < avg - 0.05 ? "below" : "close to"} the ${data.length - 1}-week average of ${Math.round(avg * 100)}%.`;
     return { data, share, verdict };
   }
 
@@ -133,7 +135,7 @@ export function createOverview(ctx) {
     const ranks = gsi.ranking("country", week).filter((r) => r.value !== null);
     const worst = ranks[0];
     const best = ranks[ranks.length - 1];
-    const scen = Object.keys(SCENARIO_COLOURS).map((s) => [s, weekIncs.filter((i) => i.scenario === s).length]);
+    const scen = Object.keys(DIRECTION_COLOURS).map((s) => [s, weekIncs.filter((i) => i.direction === s).length]);
     const total = weekIncs.length || 1;
     const prevN = inWeek(addDays(week, -7)).length;
     // Only call a country "most destabilized" if it's below zero, "most stabilized" if above.
@@ -145,8 +147,8 @@ export function createOverview(ctx) {
         <div class="stat">
           <span class="eyebrow">INCIDENTS THIS WEEK</span>
           <span class="v">${weekIncs.length}</span>
-          <div class="mix" aria-hidden="true">${scen.map(([s, n]) => `<span style="flex:${n / total};background:${SCENARIO_COLOURS[s]}"></span>`).join("")}</div>
-          <span class="mix-legend">${scen.map(([s, n]) => `<span><i style="background:${SCENARIO_COLOURS[s]}"></i>${s} ${n}</span>`).join("")}</span>
+          <div class="mix" aria-hidden="true">${scen.map(([s, n]) => `<span style="flex:${n / total};background:${DIRECTION_COLOURS[s]}"></span>`).join("")}</div>
+          <span class="mix-legend">${scen.map(([s, n]) => `<span><i style="background:${DIRECTION_COLOURS[s]}"></i>${s} ${n}</span>`).join("")}</span>
           <span class="s">${prevN} the week before.</span>
         </div>
         <div class="stat"><span class="eyebrow">MOST DESTABILIZED</span>${named(worst, worst?.value < 0, "No spotlight country destabilized this week.")}</div>
@@ -161,7 +163,7 @@ export function createOverview(ctx) {
         <span class="d">${shortDate(i.date)}</span>
         <span class="b">
           <span class="t">${esc(i.title)}</span>
-          <span class="m">${esc(i.location)} · ${esc(i.type)}${i.severity ? ` · Severity: ${esc(i.severity)}` : ""}</span>
+          <span class="m">${esc(i.location)} · ${esc(i.type)} · ${esc(i.label)}</span>
         </span>
         <span class="badge lg" style="${badgeStyle(i.gsi)};align-self:flex-start">GSI ${fmtInt(i.gsi)}</span>
       </button>`).join("") : `<p class="empty" style="padding:0">No incidents were recorded this week.</p>`}</div>`);
@@ -199,20 +201,20 @@ export function createOverview(ctx) {
     const bars = data.map((d, i) => {
       const h = (n) => (n / max) * 100;
       const on = d.w === week;
-      return `<div class="bal-col${on ? " on" : ""}" style="width:${colW}%" title="${esc(`${weekShort(d.w)}: ${d.esc} escalation, ${d.sq} status quo, ${d.de} de-escalation`)}">
+      return `<div class="bal-col${on ? " on" : ""}" style="width:${colW}%" title="${esc(`${weekShort(d.w)}: ${d.esc} destabilizing, ${d.sq} status quo, ${d.de} stabilizing`)}">
         <div class="bal-stack">
-          <span style="height:${h(d.esc)}%;background:${SCENARIO_COLOURS.Escalation}"></span>
-          <span style="height:${h(d.sq)}%;background:${SCENARIO_COLOURS["Status quo"]}"></span>
-          <span style="height:${h(d.de)}%;background:${SCENARIO_COLOURS["De-escalation"]}"></span>
+          <span style="height:${h(d.esc)}%;background:${DIRECTION_COLOURS.Destabilizing}"></span>
+          <span style="height:${h(d.sq)}%;background:${DIRECTION_COLOURS["Status quo"]}"></span>
+          <span style="height:${h(d.de)}%;background:${DIRECTION_COLOURS.Stabilizing}"></span>
         </div>
         <span class="bal-x">${i % 3 === 0 || on ? weekShort(d.w).replace(/[–-].*$/, "") : ""}</span>
       </div>`;
     }).join("");
-    return box("balance", "Escalation balance", `
-      <span class="block-hd">INCIDENTS BY SCENARIO, LAST ${data.length} WEEKS</span>
+    return box("balance", "Stability balance", `
+      <span class="block-hd">INCIDENTS BY DIRECTION, LAST ${data.length} WEEKS</span>
       <p class="ov-sub" style="margin:10px 0 12px">${verdict}</p>
-      <div class="bal" role="img" aria-label="${esc(data.map((d) => `${weekShort(d.w)}: ${d.esc} escalation, ${d.sq} status quo, ${d.de} de-escalation`).join("; "))}">${bars}</div>
-      <span class="mix-legend" style="margin-top:8px">${Object.entries(SCENARIO_COLOURS).map(([s, c]) => `<span><i style="background:${c}"></i>${s}</span>`).join("")}</span>`);
+      <div class="bal" role="img" aria-label="${esc(data.map((d) => `${weekShort(d.w)}: ${d.esc} destabilizing, ${d.sq} status quo, ${d.de} stabilizing`).join("; "))}">${bars}</div>
+      <span class="mix-legend" style="margin-top:8px">${Object.entries(DIRECTION_COLOURS).map(([s, c]) => `<span><i style="background:${c}"></i>${s}</span>`).join("")}</span>`);
   }
 
   /* ============================================ DOWNLOADS (one spec per chart) */
@@ -223,13 +225,13 @@ export function createOverview(ctx) {
     return {
       keyIncidents: {
         title: "Key incidents this week", subtitle: `${wk} · highest-scoring incidents`, filename: file("key-incidents"),
-        columns: [{ label: "Date", width: 12 }, { label: "Title", width: 60 }, { label: "Location", width: 18 }, { label: "Type", width: 26 }, { label: "Severity", width: 12 }, { label: "Headline GSI", width: 12 }, { label: "Source", width: 40 }],
-        rows: d.keyIncidents.map((i) => [i.date, i.title, i.location, i.type, i.severity, i.gsi, i.url]),
+        columns: [{ label: "Date", width: 12 }, { label: "Title", width: 60 }, { label: "Location", width: 18 }, { label: "Type", width: 26 }, { label: "Assessment", width: 26 }, { label: "Level", width: 14 }, { label: "Headline GSI", width: 12 }, { label: "Source", width: 40 }],
+        rows: d.keyIncidents.map((i) => [i.date, i.title, i.location, i.type, i.label, i.level, i.gsi, i.url]),
         image: () => tableImage({
           title: "Key incidents this week", subtitle: wk,
           // The 5th value of each row (location · type) is printed small under the title.
-          columns: [{ label: "Date", width: 70 }, { label: "Incident", width: 560, sub: 4 }, { label: "Severity", width: 110 }, { label: "GSI", width: 80, kind: "gsiInt", align: "center" }],
-          rows: d.keyIncidents.map((i) => [shortDate(i.date), i.title, i.severity || "–", i.gsi, `${i.location} · ${i.type}`])
+          columns: [{ label: "Date", width: 70 }, { label: "Incident", width: 500, sub: 4 }, { label: "Assessment", width: 190 }, { label: "GSI", width: 80, kind: "gsiInt", align: "center" }],
+          rows: d.keyIncidents.map((i) => [shortDate(i.date), i.title, i.label, i.gsi, `${i.location} · ${i.type}`])
         })
       },
       movers: {
@@ -259,14 +261,14 @@ export function createOverview(ctx) {
         image: () => barsImage({ title: "What happened", subtitle: `${wk} · incidents by category`, rows: d.categories.map((r) => ({ label: r.category, value: r.n, colour: r.colour })) })
       },
       balance: {
-        title: "Escalation balance", subtitle: `Incidents by scenario, ${d.balance.data.length} weeks to ${wk.replace(/^Week of /, "")}`, filename: file("escalation-balance"),
-        columns: [{ label: "Week ending", width: 14 }, { label: "Escalation", width: 12 }, { label: "Status quo", width: 12 }, { label: "De-escalation", width: 14 }, { label: "Escalation share (%)", width: 20 }],
+        title: "Stability balance", subtitle: `Incidents by direction, ${d.balance.data.length} weeks to ${wk.replace(/^Week of /, "")}`, filename: file("stability-balance"),
+        columns: [{ label: "Week ending", width: 14 }, { label: "Destabilizing", width: 14 }, { label: "Status quo", width: 12 }, { label: "Stabilizing", width: 12 }, { label: "Destabilizing share (%)", width: 22 }],
         rows: d.balance.data.map((x) => [x.w, x.esc, x.sq, x.de, x.esc + x.de ? Math.round(d.balance.share(x) * 100) : null]),
         image: () => stackedImage({
-          title: "Escalation balance", subtitle: `Incidents by scenario, last ${d.balance.data.length} weeks`, note: d.balance.verdict,
+          title: "Stability balance", subtitle: `Incidents by direction, last ${d.balance.data.length} weeks`, note: d.balance.verdict,
           columns: d.balance.data.map((x) => ({ label: weekShort(x.w).replace(/[–-].*$/, ""), highlight: x.w === week, parts: [
-            { value: x.de, colour: SCENARIO_COLOURS["De-escalation"] }, { value: x.sq, colour: SCENARIO_COLOURS["Status quo"] }, { value: x.esc, colour: SCENARIO_COLOURS.Escalation }] })),
-          legend: Object.entries(SCENARIO_COLOURS).map(([label, colour]) => ({ label, colour }))
+            { value: x.de, colour: DIRECTION_COLOURS.Stabilizing }, { value: x.sq, colour: DIRECTION_COLOURS["Status quo"] }, { value: x.esc, colour: DIRECTION_COLOURS.Destabilizing }] })),
+          legend: Object.entries(DIRECTION_COLOURS).map(([label, colour]) => ({ label, colour }))
         })
       }
     };

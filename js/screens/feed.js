@@ -5,10 +5,9 @@
  *   │ Search            │ │ active filter chips (× to remove)                 │
  *   │ Dates from / to   │ ├────────────────────┬──────────────────────────────┤
  *   │ Place             │ │ results (50 at a   │ event detail                 │
- *   │ Severity          │ │ time, "show more") │ (components/eventDetail.js)  │
+ *   │ Direction         │ │ time, "show more") │ (components/eventDetail.js)  │
+ *   │ Severity, Level   │ │                    │                              │
  *   │ Category → Type   │ │                    │                              │
- *   │ Scope, Scenario   │ │                    │                              │
- *   │ GSI direction     │ │                    │                              │
  *   └───────────────────┘ └────────────────────┴──────────────────────────────┘
  *
  * Filters follow "checked = included": everything starts checked, and an
@@ -44,13 +43,19 @@ export function createFeed(ctx) {
   const typesIn = (cat) => (cat === "Uncategorized" ? unlisted : types.filter((t) => t.category === cat).map((t) => t.name));
   const allTypes = categories.flatMap(typesIn);
 
+  // Checkbox groups. Level, direction and severity are derived from the scores
+  // (model/wording.js), so they can't be mistyped. "None" = a score of 0.
   const GROUPS = {
-    severity: cfg.severities,
-    scope: ["International", "Country"],
-    scenario: ["Escalation", "Status quo", "De-escalation"],
-    dir: ["Destabilizing (below 0)", "Neutral (0)", "Stabilizing (above 0)"]
+    dir: ["Destabilizing", "Status quo", "Stabilizing"],
+    severity: [...cfg.severities, "None"],
+    level: ["Country", "International", "Global"]
   };
-  const dirOf = (i) => (i.gsi === null ? null : i.gsi < 0 ? GROUPS.dir[0] : i.gsi > 0 ? GROUPS.dir[2] : GROUPS.dir[1]);
+  const DIR_HINT = {
+    Destabilizing: "destabilization · escalation · disruption",
+    "Status quo": "score of 0",
+    Stabilizing: "stabilization · de-escalation · enhancement"
+  };
+  const LEVEL_HINT = { Country: "one country", International: "a region or 2+ countries", Global: "a global theme" };
 
   const dates = incidents.map((i) => i.date).sort();
   const minDate = dates[0];
@@ -59,7 +64,7 @@ export function createFeed(ctx) {
   /** Fresh filter values: everything included. */
   const fresh = () => ({
     q: "", from: "", to: "", place: "",
-    severity: new Set(GROUPS.severity), scope: new Set(GROUPS.scope), scenario: new Set(GROUPS.scenario), dir: new Set(GROUPS.dir),
+    severity: new Set(GROUPS.severity), level: new Set(GROUPS.level), dir: new Set(GROUPS.dir),
     types: new Set(allTypes),
     sort: "new", limit: PAGE
   });
@@ -69,7 +74,9 @@ export function createFeed(ctx) {
   // Counts shown next to each option (whole record).
   const count = (fn) => { const m = new Map(); incidents.forEach((i) => { const k = fn(i); m.set(k, (m.get(k) || 0) + 1); }); return m; };
   const nType = count((i) => i.type);
-  const nSev = count((i) => i.severity);
+  const nSev = count((i) => i.severity || "None");
+  const nDir = count((i) => i.direction);
+  const nLevel = count((i) => i.level);
 
   /* --------------------------------------------------------- matching */
   /** Place filter values: "e:<entityKey>" (scored for it, or located in it) or "l:<Location>". */
@@ -91,10 +98,9 @@ export function createFeed(ctx) {
       (!q || `${i.title} ${i.description} ${i.location} ${i.type}`.toLowerCase().includes(q)) &&
       (!f.from || i.date >= f.from) && (!f.to || i.date <= f.to) &&
       inPlace(i) &&
-      passes(f.severity, GROUPS.severity, i.severity) &&
-      passes(f.scope, GROUPS.scope, i.scope) &&
-      passes(f.scenario, GROUPS.scenario, i.scenario) &&
-      passes(f.dir, GROUPS.dir, dirOf(i)) &&
+      passes(f.dir, GROUPS.dir, i.direction) &&
+      passes(f.severity, GROUPS.severity, i.severity || "None") &&
+      passes(f.level, GROUPS.level, i.level) &&
       passes(f.types, allTypes, i.type)
     );
     const by = {
@@ -102,13 +108,13 @@ export function createFeed(ctx) {
       old: (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0),
       neg: (a, b) => (a.gsi ?? 0) - (b.gsi ?? 0) || (a.date < b.date ? 1 : -1),
       pos: (a, b) => (b.gsi ?? 0) - (a.gsi ?? 0) || (a.date < b.date ? 1 : -1),
-      sev: (a, b) => cfg.severities.indexOf(b.severity) - cfg.severities.indexOf(a.severity) || (a.date < b.date ? 1 : -1)
+      sev: (a, b) => Math.abs(b.gsi ?? 0) - Math.abs(a.gsi ?? 0) || (a.date < b.date ? 1 : -1) // severity = size of the score
     }[f.sort];
     return list.sort(by);
   }
 
   /* --------------------------------------------------- filters (static) */
-  const cb = (group, value, label, n) => `<label class="cb"><input type="checkbox" data-group="${group}" value="${esc(value)}" checked> ${esc(label)}${n !== undefined ? `<span class="n">${n}</span>` : ""}</label>`;
+  const cb = (group, value, label, n, hint) => `<label class="cb"><input type="checkbox" data-group="${group}" value="${esc(value)}" checked> <span>${esc(label)}${hint ? `<span class="hint">${esc(hint)}</span>` : ""}</span>${n !== undefined ? `<span class="n">${n}</span>` : ""}</label>`;
   const byName = (a, b) => a.name.localeCompare(b.name);
 
   el.innerHTML = `
@@ -129,7 +135,10 @@ export function createFeed(ctx) {
             <optgroup label="Other locations">${places.list.filter((p) => !p.entity).map((p) => `<option value="l:${esc(p.name)}">${esc(p.name)} (${p.count})</option>`).join("")}</optgroup>
           </select>
           <span class="small">Spotlight countries include incidents scored for them or located there.</span></fieldset>
-        <fieldset><span class="flabel">SEVERITY</span>${GROUPS.severity.map((s) => cb("severity", s, s, nSev.get(s) || 0)).join("")}</fieldset>
+        <fieldset><span class="flabel">DIRECTION</span>${GROUPS.dir.map((s) => cb("dir", s, s, nDir.get(s) || 0, DIR_HINT[s])).join("")}</fieldset>
+        <fieldset><span class="flabel">SEVERITY</span>${GROUPS.severity.map((s) => cb("severity", s, s === "None" ? "None (status quo)" : s, nSev.get(s) || 0)).join("")}
+          <span class="small">From the size of the headline GSI: ±10 Low … ±90 High.</span></fieldset>
+        <fieldset><span class="flabel">LEVEL</span>${GROUPS.level.map((s) => cb("level", s, s, nLevel.get(s) || 0, LEVEL_HINT[s])).join("")}</fieldset>
         <fieldset><span class="flabel">TYPE</span>
           <span style="display:flex;gap:12px;font-size:12px"><button type="button" class="cat-toggle" style="padding:0" data-action="types-all">Select all</button><button type="button" class="cat-toggle" style="padding:0" data-action="types-none">Clear</button></span>
           ${categories.map((cat) => `
@@ -137,9 +146,6 @@ export function createFeed(ctx) {
               <label class="cb"><input type="checkbox" data-cat="${esc(cat)}" checked> ${esc(cat)}</label>
               <div class="types">${typesIn(cat).map((t) => cb("types", t, t, nType.get(t) || 0)).join("")}</div>
             </div>`).join("")}</fieldset>
-        <fieldset><span class="flabel">SCOPE</span>${GROUPS.scope.map((s) => cb("scope", s, s)).join("")}</fieldset>
-        <fieldset><span class="flabel">SCENARIO</span>${GROUPS.scenario.map((s) => cb("scenario", s, s)).join("")}</fieldset>
-        <fieldset><span class="flabel">HEADLINE GSI</span>${GROUPS.dir.map((s) => cb("dir", s, s)).join("")}</fieldset>
         <button type="button" class="btn" data-action="reset">Reset all filters</button>
       </form>
       <div class="feed-main">
@@ -170,7 +176,7 @@ export function createFeed(ctx) {
     f.from = byId("ffrom").value;
     f.to = byId("fto").value;
     f.place = byId("fplace").value;
-    for (const g of ["severity", "scope", "scenario", "dir", "types"]) {
+    for (const g of ["dir", "severity", "level", "types"]) {
       f[g] = new Set([...form.querySelectorAll(`input[data-group="${g}"]:checked`)].map((i) => i.value));
     }
     f.limit = PAGE;
@@ -223,8 +229,8 @@ export function createFeed(ctx) {
     if (f.q.trim()) chips.push(["q", `Search: "${f.q.trim()}"`]);
     if (f.from || f.to) chips.push(["dates", `${f.from ? shortDate(f.from) : "Start"} to ${f.to ? shortDate(f.to) : "latest"}`]);
     if (f.place) chips.push(["place", byId("fplace").selectedOptions[0]?.textContent || f.place]);
-    for (const [g, all] of [["severity", GROUPS.severity], ["types", allTypes], ["scope", GROUPS.scope], ["scenario", GROUPS.scenario], ["dir", GROUPS.dir]]) {
-      if (f[g].size !== all.length) chips.push([g, `${{ severity: "Severity", types: "Type", scope: "Scope", scenario: "Scenario", dir: "Headline GSI" }[g]}: ${f[g].size} of ${all.length}`]);
+    for (const [g, all] of [["dir", GROUPS.dir], ["severity", GROUPS.severity], ["level", GROUPS.level], ["types", allTypes]]) {
+      if (f[g].size !== all.length) chips.push([g, `${{ dir: "Direction", severity: "Severity", level: "Level", types: "Type" }[g]}: ${f[g].size} of ${all.length}`]);
     }
     return chips;
   }
@@ -233,7 +239,7 @@ export function createFeed(ctx) {
     return `<button class="ev-row" data-action="pick" data-id="${i.id}" aria-pressed="false" style="border-left-color:${edge(i.gsi)}">
       <span class="top"><span>${shortDate(i.date)} · ${esc(i.type)}</span><span class="badge" style="${badgeStyle(i.gsi)}">${fmtInt(i.gsi)}</span></span>
       <span class="t">${esc(i.title)}</span>
-      <span class="loc">${esc(i.location)}${i.severity ? ` · Severity: ${esc(i.severity)}` : ""}</span>
+      <span class="loc">${esc(i.location)} · ${esc(i.label)}</span>
     </button>`;
   }
 
@@ -283,9 +289,9 @@ export function createFeed(ctx) {
       subtitle: `${plural(list.length, "incident")}${chips.length ? ` · filters: ${chips.join("; ")}` : " · no filters"}`,
       filename: `gfp-incidents-${ctx.asOf}`,
       columns: [{ label: "Date", width: 12 }, { label: "Week ending", width: 12 }, { label: "Location", width: 18 }, { label: "Title", width: 60 },
-        { label: "Type", width: 26 }, { label: "Category", width: 26 }, { label: "Severity", width: 12 }, { label: "Scope", width: 13 }, { label: "Scenario", width: 13 },
+        { label: "Type", width: 26 }, { label: "Category", width: 26 }, { label: "Assessment", width: 26 }, { label: "Level", width: 14 }, { label: "Severity", width: 12 },
         { label: "Headline GSI", width: 12 }, ...cfg.entities.map((e) => ({ label: `GSI ${e.name}`, width: 12 })), { label: "Description", width: 80 }, { label: "Link", width: 40 }],
-      rows: list.map((i) => [i.date, i.week, i.location, i.title, i.type, i.category, i.severity, i.scope, i.scenario, i.gsi,
+      rows: list.map((i) => [i.date, i.week, i.location, i.title, i.type, i.category, i.label, i.level, i.severity || "None", i.gsi,
         ...cfg.entities.map((e) => i.scores[e.key] ?? null), i.description, i.url])
     };
   }

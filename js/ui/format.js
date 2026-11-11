@@ -43,14 +43,8 @@ export const edge = (v) => (v === null || v === undefined ? "#CFCCC4" : v <= -5 
 /** Inline style for a score badge (used all over). */
 export const badgeStyle = (v) => `background:${tint(v)};color:${ink(v)}`;
 
-/** "Low/medium destabilization", "Status quo", "No events this week" */
-export function band(v) {
-  if (v === null || v === undefined) return "No events this week";
-  const a = Math.abs(v);
-  if (a < 5) return "Status quo";
-  const level = a < 20 ? "Low" : a < 40 ? "Low/medium" : a < 60 ? "Medium" : a < 80 ? "Medium/high" : "High";
-  return `${level} ${v > 0 ? "stabilization" : "destabilization"}`;
-}
+/** Words for a weekly GSI ("Low/medium escalation"…): see model/wording.js bandOf. */
+export { bandOf as band } from "../model/wording.js";
 
 /** "3 events" / "1 event" */
 export const plural = (n, word) => `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`;

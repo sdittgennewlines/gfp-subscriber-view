@@ -133,7 +133,7 @@ export function createProfilePanel(ctx) {
       <div class="gsi-box">
         <span class="eyebrow">GSI · ${weekLabel(state.week)}</span>
         <span style="display:flex;align-items:baseline;gap:6px"><span class="big" style="color:${ink(v)}">${fmt(v)}</span><span style="font-size:14px;color:var(--muted)">/ 100</span></span>
-        <span class="band" style="background:${tint(v)};color:${ink(v)}">${band(v)}</span>
+        <span class="band" style="background:${tint(v)};color:${ink(v)}">${band(v, gsi.entity(key).level)}</span>
         <span class="chg">${change}${v !== null ? ` Based on ${plural(n, "incident")}.` : ""}</span>
         <div class="scale-bar"><div class="grad"></div>${v !== null ? `<div class="mark" style="left:${(v + 100) / 2}%"></div>` : ""}</div>
         <div class="scale-ends"><span>−100</span><span>Status quo</span><span>+100</span></div>

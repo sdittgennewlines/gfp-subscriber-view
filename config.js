@@ -173,8 +173,25 @@ export const CONFIG = {
 
   /* ============================================================ SEVERITY */
 
-  // The five standard severity levels, lowest first. The sheet's spellings
-  // ("low", "Low / Medium", "medium/high" ...) are folded into these.
+  /* ======================================================== INCIDENT WORDING */
+
+  // An incident's level comes from what it counts toward (no Scope column):
+  //   Global         it counts toward a global theme (Energy, Climate)
+  //   International  it counts toward a region, or toward 2+ countries
+  //   Country        otherwise (one country, or none)
+  // Its direction comes from the sign of its headline GSI, and the words
+  // depend on the level. Regions use the International words and themes
+  // the Global words when their weekly GSI is described.
+  vocabulary: {
+    Country: { neg: "destabilization", pos: "stabilization" },
+    International: { neg: "escalation", pos: "de-escalation" },
+    Global: { neg: "disruption", pos: "enhancement" },
+    zero: "status quo" // a score of 0
+  },
+
+  // Severity comes from the size of the headline GSI (no Severity column):
+  //   ±10 Low · ±30 Low/Medium · ±50 Medium · ±70 Medium/High · ±90 High · 0 none
+  // The five severity levels, lowest first (used for filtering and alerts).
   severities: ["Low", "Low/Medium", "Medium", "Medium/High", "High"],
 
   /* ============================================================ DOWNLOADS */

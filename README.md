@@ -44,6 +44,15 @@ All the arithmetic is in `js/model/gsi.js`.
 - **A week with no incidents is blank**, never 0. Blank weeks show white with a dashed outline, break the trend line, and show "–" in tables.
 - **Taiwan** has no columns in the sheet yet. Until it does, Taiwan is scored from incidents whose Location is Taiwan, using each incident's headline GSI. Add `Taiwan` and `GSI Taiwan` columns and they are used automatically.
 - **The headline GSI** (column J) is shown with each incident and used for sorting and filtering. It is not averaged into any country's GSI.
+- **How incidents are described** (`js/model/wording.js`; vocabulary in `config.js` → `vocabulary`). The sheet's Scope, Scenario and Severity columns are no longer used; all three follow from the scores.
+  - **Level** comes from what the incident counts toward: a global theme makes it *Global*; a region, or two or more countries, makes it *International*; otherwise it is *Country*.
+  - **Wording** depends on the level and the sign of the headline GSI:
+    - Country: destabilization / stabilization;
+    - International: escalation / de-escalation;
+    - Global: disruption / enhancement;
+    - a score of 0 is the status quo.
+  - **Severity** is the size of the headline GSI: ±10 Low, ±30 Low/Medium, ±50 Medium, ±70 Medium/High, ±90 High.
+  - A weekly GSI gets the words of its entity's level: a region's weekly GSI is an "escalation", a theme's a "disruption".
 
 ## Project layout
 
@@ -72,6 +81,7 @@ js/
   lib/csv.js                 CSV parser
   lib/xlsx.js, lib/zip.js    writes Excel files (no libraries needed)
 tools/
+  word-template/             the weekly incident report (Word) and the scripts that build it
   stamp.mjs                  fingerprints file addresses in index.html (run before pushing code changes)
   build-data.mjs             refreshes data/ from CSV exports (Node 18+, no packages needed)
   build_map.py               one-off: Natural Earth GeoJSON → data/world.json

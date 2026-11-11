@@ -14,11 +14,12 @@
  *     id:        "2026-10-22-k3x9f1",   stable across rebuilds (date + title/link hash)
  *     date:      "2026-10-22",
  *     week:      "2026-10-23",          the Friday that ends its GSI week
- *     scope:     "Country" | "International"
- *     scenario:  "Escalation" | "De-escalation" | "Status quo"
  *     type:      "Diplomatic agreements"
  *     category:  "Diplomatic/Political action"
- *     severity:  "Low" | "Low/Medium" | "Medium" | "Medium/High" | "High" | ""
+ *     level:     "Country" | "International" | "Global"      } derived from the scores,
+ *     direction: "Destabilizing" | "Status quo" | "Stabilizing" } not typed in the sheet
+ *     severity:  "Low" … "High", or "" for a score of 0        } (see model/wording.js)
+ *     label:     "Medium escalation", "Low stabilization", "Status quo"…
  *     location:  "Venezuela"            as written in the sheet
  *     title, description, url
  *     gsi:       10                     headline score for the incident (or null)
@@ -27,8 +28,11 @@
  *   }
  *
  * Columns are looked up by NAME, so reordering columns in the sheet is safe.
+ * The old sheet's Scope, Scenario and Severity columns are ignored: level,
+ * direction and severity are worked out from the scores instead.
  */
 import { weekOf } from "../model/weeks.js";
+import { levelOf, directionOf, severityOf, describe } from "../model/wording.js";
 
 /* ----------------------------------------------------------- helpers */
 
@@ -61,25 +65,6 @@ function hash(s) {
   return (h >>> 0).toString(36);
 }
 
-/**
- * Fold the sheet's many spellings of severity into the five standard levels.
- * "low", "Low / Medium", "low/medium", "Medium/High" ... → "Low/Medium" etc.
- */
-export function normalizeSeverity(s, levels) {
-  const key = clean(s).toLowerCase().replace(/\s*\/\s*/g, "/");
-  return levels.find((l) => l.toLowerCase() === key) || "";
-}
-
-/** "Status quo " / "status quo" → "Status quo"; "de-escalation" → "De-escalation". */
-function normalizeScenario(s) {
-  const t = clean(s).toLowerCase();
-  if (!t) return "";
-  if (t.startsWith("status")) return "Status quo";
-  if (t.startsWith("de-esc") || t.startsWith("deesc")) return "De-escalation";
-  if (t.startsWith("esc")) return "Escalation";
-  return clean(s);
-}
-
 /* -------------------------------------------------------------- main */
 
 /**
@@ -108,10 +93,6 @@ export function normalizeIncidents(rows, config, types) {
     const t = typeIndex.get(rawType.toLowerCase());
     if (rawType && !t) warn(rowNo, `type "${rawType}" is not in the Incidents - Type list (filed under "Uncategorized")`);
 
-    // Severity.
-    const severity = normalizeSeverity(r["Severity"], config.severities);
-    if (clean(r["Severity"]) && !severity) warn(rowNo, `unrecognized severity "${clean(r["Severity"])}"`);
-
     const location = clean(r["Location"]);
     const gsi = toNumber(r["GSI"]);
 
@@ -131,15 +112,19 @@ export function normalizeIncidents(rows, config, types) {
       }
     }
 
+    // Level, direction and severity follow from the scores (model/wording.js).
+    const level = levelOf(scores);
+
     incidents.push({
       id: `${date}-${hash(title + "|" + clean(r["Link"]))}`,
       date,
       week: weekOf(date, config.weekStartsOn),
-      scope: clean(r["Scope"]),
-      scenario: normalizeScenario(r["Scenario"]),
       type: t ? t.name : rawType,
       category: t ? t.category : rawType ? "Uncategorized" : "",
-      severity,
+      level,
+      direction: directionOf(gsi),
+      severity: severityOf(gsi),
+      label: describe(gsi, level),
       location,
       title,
       description: clean(r["Description"]),

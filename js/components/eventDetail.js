@@ -4,7 +4,7 @@
  *
  *   date | LOCATION | TYPE
  *   Title
- *   Scenario · Severity · Scope · Category
+ *   Medium escalation · International · Category   (derived: model/wording.js)
  *   [cross-link callout, e.g. Mass Atrocities Monitor (placeholder)]
  *   Description
  *   WHERE THIS EVENT MOVED THE GSI           Headline score
@@ -54,9 +54,8 @@ export function renderEventDetail(ctx, inc) {
     <div class="crumbs"><span>${slashDate(inc.date)}</span><span class="bar" aria-hidden="true">|</span><span>${esc(inc.location.toUpperCase())}</span><span class="bar" aria-hidden="true">|</span><span>${esc(inc.type.toUpperCase())}</span></div>
     <h3>${esc(inc.title)}</h3>
     <div class="chips">
-      ${inc.scenario ? `<span>Scenario: ${esc(inc.scenario)}</span>` : ""}
-      ${inc.severity ? `<span>Severity: ${esc(inc.severity)}</span>` : ""}
-      ${inc.scope ? `<span>Scope: ${esc(inc.scope)}</span>` : ""}
+      <span style="${badgeStyle(inc.gsi)};font-weight:500">${esc(inc.label)}</span>
+      <span>${esc(inc.level)} level</span>
       ${inc.category ? `<span>Category: ${esc(inc.category)}</span>` : ""}
     </div>
     ${xl ? `

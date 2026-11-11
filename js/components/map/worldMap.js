@@ -367,7 +367,7 @@ export function createWorldMap(ctx) {
       tc.innerHTML = `<span class="lbl">GLOBAL THEMES</span>` + themes.map((e) => {
         const v = gsi.value(e.key, state.week);
         return `<button class="theme-card" data-action="pick" data-target="${e.key}" aria-pressed="${e.key === state.sel}" style="border-left-color:${v.value === null ? "#DCDAD3" : fill(v.value)}">
-          <span><span class="nm">${esc(e.name)}</span><br><span class="sub">${esc(band(v.value))} · ${plural(v.n, "incident")}</span></span>
+          <span><span class="nm">${esc(e.name)}</span><br><span class="sub">${esc(band(v.value, "theme"))} · ${plural(v.n, "incident")}</span></span>
           <span class="badge lg" style="background:${v.value === null ? "#F1F0EC" : "#FFFFFF"};color:${ink(v.value)}">${fmt(v.value)}</span></button>`;
       }).join("");
     }

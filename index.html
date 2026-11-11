@@ -7,32 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Roboto:wght@300;400;500;700&display=swap">
-<link rel="stylesheet" href="css/styles.css?v=5c614f40bc">
+<link rel="stylesheet" href="css/styles.css?v=2b5905f661">
 <!-- stamp:start: written by tools/stamp.mjs; don't edit by hand -->
 <script type="importmap">
 {
   "imports": {
-    "./config.js": "./config.js?v=91f408c491",
+    "./config.js": "./config.js?v=be9dfba396",
     "./js/actions/cite.js": "./js/actions/cite.js?v=25c8b9803e",
     "./js/actions/download.js": "./js/actions/download.js?v=141e838971",
     "./js/actions/exportDialog.js": "./js/actions/exportDialog.js?v=76c9953db2",
     "./js/actions/share.js": "./js/actions/share.js?v=9cbe8e2f95",
     "./js/actions/toast.js": "./js/actions/toast.js?v=3c2e41ec33",
     "./js/actions/tooltip.js": "./js/actions/tooltip.js?v=4dda421d21",
-    "./js/components/eventDetail.js": "./js/components/eventDetail.js?v=d816b75524",
+    "./js/components/eventDetail.js": "./js/components/eventDetail.js?v=4cfd5c0e79",
     "./js/components/gsiOverTime.js": "./js/components/gsiOverTime.js?v=a14f0c0007",
-    "./js/components/map/eventsPanel.js": "./js/components/map/eventsPanel.js?v=ccf4577a1a",
-    "./js/components/map/profilePanel.js": "./js/components/map/profilePanel.js?v=55e3561601",
+    "./js/components/map/eventsPanel.js": "./js/components/map/eventsPanel.js?v=52ba5c1645",
+    "./js/components/map/profilePanel.js": "./js/components/map/profilePanel.js?v=a1135bb1e3",
     "./js/components/map/rankTable.js": "./js/components/map/rankTable.js?v=d04f051d79",
     "./js/components/map/reportsStrip.js": "./js/components/map/reportsStrip.js?v=9b46ec3440",
     "./js/components/map/toolbar.js": "./js/components/map/toolbar.js?v=8ca2a76064",
-    "./js/components/map/worldMap.js": "./js/components/map/worldMap.js?v=5b626ada2e",
+    "./js/components/map/worldMap.js": "./js/components/map/worldMap.js?v=7917157a53",
     "./js/components/reportCards.js": "./js/components/reportCards.js?v=417630e6ad",
     "./js/components/tabs.js": "./js/components/tabs.js?v=3b4f8b4422",
     "./js/components/titleBar.js": "./js/components/titleBar.js?v=8463a67e74",
     "./js/components/trendChart.js": "./js/components/trendChart.js?v=c719ab25fe",
     "./js/data/load.js": "./js/data/load.js?v=66c2bfa8cf",
-    "./js/data/normalize.js": "./js/data/normalize.js?v=a7f7780243",
+    "./js/data/normalize.js": "./js/data/normalize.js?v=a00c221bf4",
     "./js/export/pngCharts.js": "./js/export/pngCharts.js?v=694df8d2bb",
     "./js/lib/csv.js": "./js/lib/csv.js?v=fe8a8a8ce2",
     "./js/lib/xlsx.js": "./js/lib/xlsx.js?v=aab74dbfc3",
@@ -41,13 +41,14 @@
     "./js/model/places.js": "./js/model/places.js?v=f412df65bd",
     "./js/model/selection.js": "./js/model/selection.js?v=0a383e961d",
     "./js/model/weeks.js": "./js/model/weeks.js?v=73971d3c98",
+    "./js/model/wording.js": "./js/model/wording.js?v=bf53d55fe7",
     "./js/screens/alerts.js": "./js/screens/alerts.js?v=44070cdec6",
-    "./js/screens/feed.js": "./js/screens/feed.js?v=c19afdbc5b",
-    "./js/screens/overview.js": "./js/screens/overview.js?v=5719bdd5d4",
+    "./js/screens/feed.js": "./js/screens/feed.js?v=03807dd495",
+    "./js/screens/overview.js": "./js/screens/overview.js?v=79e515b593",
     "./js/screens/reports.js": "./js/screens/reports.js?v=ab2d38b436",
     "./js/state.js": "./js/state.js?v=f88fafc213",
     "./js/ui/dom.js": "./js/ui/dom.js?v=67b0989562",
-    "./js/ui/format.js": "./js/ui/format.js?v=d2baebd7ef",
+    "./js/ui/format.js": "./js/ui/format.js?v=b5ba42bb47",
     "./js/ui/problems.js": "./js/ui/problems.js?v=0366005255"
   }
 }
@@ -102,10 +103,11 @@
             <summary>How the GSI works</summary>
             <p>The Geopolitical Stability Index (GSI) measures whether a country, region or global theme became more or less stable in a given week, on a scale from −100 (sharp destabilization) to +100 (sharp stabilization). A score near zero means the status quo held.</p>
             <ul>
-              <li><b>Incidents.</b> The Geopolitical Forecasting and Analysis Unit records significant incidents as they happen. Each gets a type, a severity (Low to High) and a score in steps of 20, from −90 to +90.</li>
+              <li><b>Incidents.</b> The Geopolitical Forecasting and Analysis Unit records significant incidents as they happen. Each gets a type and a headline score in steps of 20, from −90 to +90.</li>
               <li><b>Who an incident counts toward.</b> Analysts tie each incident to the spotlight countries, regions and themes it affects, and score it for each one separately. An incident in one country can therefore move several GSIs by different amounts.</li>
               <li><b>The weekly GSI.</b> A country's, region's or theme's GSI for a week is the average of its scores over that week's incidents. Weeks run Saturday to Friday.</li>
               <li><b>Weeks with no incidents</b> have no GSI. They are left blank (white, with a dashed outline) rather than counted as zero.</li>
+              <li><b>How incidents are described.</b> The words depend on the incident's level, which follows from what it counts toward. An incident tied to one country is a <i>destabilization</i> or <i>stabilization</i>; one tied to a region or to two or more countries is an <i>escalation</i> or <i>de-escalation</i>; one tied to a global theme (energy, climate) is a <i>disruption</i> or <i>enhancement</i>. A score of 0 is the <i>status quo</i>. Severity follows from the size of the score: ±10 low, ±30 low/medium, ±50 medium, ±70 medium/high, ±90 high.</li>
               <li><b>Colours</b> run from red (destabilizing) through light purple (status quo, −5 to +5) to blue (stabilizing). Bubbles on the map count each country's incidents that week.</li>
               <li><b>Countries outside the 17 spotlight countries</b> have no GSI, but their incidents are shown and can move the GSI of the countries, regions and themes they're tied to.</li>
               <li><b>Updates.</b> The platform refreshes every Friday at 5pm ET with the week's incidents.</li>
