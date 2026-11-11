@@ -35,7 +35,6 @@ const scores = ["−90", "−70", "−50", "−30", "−10", "0", "+10", "+30", 
 const lists = {
   country: countryList,
   type: types,
-  type2: ["(none)", ...types],
   gsi: scores,
   entity: entities,
   score: scores,
@@ -88,7 +87,7 @@ function incidentBlock(n) {
     row("Title", [marker(k("title"))], { required: true }),
     row("Date", [marker(k("date"))], { required: true, hint: "When it happened" }),
     row("Location", [marker(k("country")), sep(), tag("Place Detail "), marker(k("place"))], { required: true, hint: "Place Detail can be a more specific location, such as a city." }),
-    row("Type", [marker(k("type")), sep(), tag("Secondary type "), marker(k("type2"))], { required: true }),
+    row("Type", [marker(k("type"))], { required: true }),
     row("Headline GSI", [marker(k("gsi"))], { required: true, hint: "Overall GSI score" })
   ];
   for (let i = 1; i <= 5; i++) {
@@ -146,8 +145,17 @@ const doc = new Document({
         children: [new TextRun({ text: "Week ending (Friday): ", font: FONT, size: 22, bold: true, color: INK }), marker("week_ending")]
       }),
 
+      // The one rule that keeps the import working, shown big and boxed.
+      new Paragraph({
+        spacing: { before: 120, after: 240 },
+        shading: { fill: "F3EFFA", type: ShadingType.CLEAR, color: "auto" },
+        border: { top: { style: BorderStyle.SINGLE, size: 12, color: "5A4B80", space: 8 }, bottom: { style: BorderStyle.SINGLE, size: 12, color: "5A4B80", space: 8 },
+                  left: { style: BorderStyle.SINGLE, size: 12, color: "5A4B80", space: 8 }, right: { style: BorderStyle.SINGLE, size: 12, color: "5A4B80", space: 8 } },
+        children: [new TextRun({ text: "To add an incident, copy a whole empty table and paste it at the end. Don't retype a table or paste text into the document to make one.", font: FONT, size: 30, bold: true, color: INK })]
+      }),
       new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("How to fill this in")] }),
-      steps("Add each incident as its own table. To add one, copy a whole empty table and paste it at the end. Don't type incidents outside the tables."),
+      steps("Each incident is its own table. Don't type incidents outside the tables."),
+      steps("Pasting a summary or link is fine: click inside the box first, then paste."),
       steps("Fill the grey boxes. Most are dropdowns: click and choose. Fields marked * are required."),
       steps("Editorial edits this document as usual. When it is final, accept all tracked changes. The import page refuses a document that still has open changes."),
       steps("The import page reads the tables, shows them for review, and adds them to the Excel master. Nothing is retyped."),

@@ -38,3 +38,7 @@ After a LibreOffice recalculation:
 - 0 formula errors;
 - every incident's week, category, level, assessment and severity match the site;
 - all 650 entity-weeks in Weekly GSI match the site's GSI exactly.
+
+## Columns no longer filled
+
+- **Secondary type** (dropped from the Word template on Nov 11). It stays in the master, blank, so no formula or paste position changes. Don't delete it: the Problems formula refers to it.
