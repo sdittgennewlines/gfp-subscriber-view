@@ -19,9 +19,11 @@ const MAP_TO_SHEET = { "United States of America": "United States", "Dem. Rep. C
 const SKIP = new Set(["Antarctica", "Fr. S. Antarctic Lands", "N. Cyprus", "Somaliland", "W. Sahara"]);
 const countries = new Set(world.countries.map((c) => MAP_TO_SHEET[c.name] || c.name).filter((n) => !SKIP.has(n)));
 incidents.forEach((i) => countries.add(i.location));
-["Caribbean", "Gaza"].forEach((x) => countries.delete(x)); // places, not countries: use Place detail
+// Every incident needs a real location: no "Multiple / regional" or Caribbean option.
+// Gaza is entered as a Place Detail. The EU counts as a location and is mapped to Brussels.
+["Caribbean", "Gaza"].forEach((x) => countries.delete(x));
 ["Singapore", "Bahrain", "EU"].forEach((x) => countries.add(x));
-const countryList = ["Multiple / regional (see Place Detail)", ...[...countries].sort((a, b) => a.localeCompare(b))];
+const countryList = [...countries].sort((a, b) => a.localeCompare(b));
 
 const entities = [
   "United States", "China", "Iran", "Venezuela", "India", "Brazil", "Canada", "DR Congo", "Ethiopia", "France", "Germany",

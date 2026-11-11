@@ -51,6 +51,9 @@ RPR = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:va
 RPR_PH = '<w:rPr><w:rStyle w:val="PlaceholderText"/><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/></w:rPr>'
 _id = [1000]
 
+# Dropdown text shown in Word when it differs from the stored value.
+DISPLAY = {"EU": "EU (Brussels)"}
+
 
 def control(key):
     field, n = key.split("#") if "#" in key else (key, "")
@@ -60,7 +63,7 @@ def control(key):
     esc = lambda s: html.escape(s, quote=True)
 
     if kind == "drop":
-        items = "".join(f'<w:listItem w:displayText="{esc(v)}" w:value="{esc(v)}"/>' for v in LISTS[lst])
+        items = "".join(f'<w:listItem w:displayText="{esc(DISPLAY.get(v, v))}" w:value="{esc(v)}"/>' for v in LISTS[lst])
         typ = f"<w:dropDownList>{items}</w:dropDownList>"
     elif kind == "date":
         full = f' w:fullDate="{value}T00:00:00Z"' if value else ""

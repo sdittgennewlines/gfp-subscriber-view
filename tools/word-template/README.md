@@ -19,7 +19,7 @@ There are no Scope, Scenario, Severity or Analyst fields. The platform works out
 
 ## Fields that differ from the sheet
 
-- **Location** (tag `country`) is the country or, for a place that isn't one, "Multiple / regional". **Place Detail** (tag `place`) is optional free text, such as a city.
+- **Location** (tag `country`) is always required: a country, or "EU (Brussels)" (stored as EU). There is no regional or Caribbean option. **Place Detail** (tag `place`) is optional free text, such as a city.
 - **Key Incident?** (tag `featured`) is left blank by Student Fellows. Blank counts as No.
 
 ## Place Detail and the map (planned for the Excel master)
