@@ -152,15 +152,18 @@ for name, ref in NAMES.items():
 ws = wb.create_sheet("Incidents", 0)
 
 # (header, width, kind) kind: "in" typed/pasted, "f" formula
-COLS = [("ID", 18, "in"), ("Week ending", 12, "f"), ("Date", 12, "in"), ("Title", 48, "in"),
+# Typed/pasted columns come first and side by side, so one paste from the import page fills a
+# row without touching the formula columns, which all sit at the right.
+COLS = [("ID", 18, "in"), ("Date", 12, "in"), ("Title", 48, "in"),
         ("Location", 16, "in"), ("Place Detail", 16, "in"), ("Type", 24, "in"), ("Secondary type", 20, "in"),
-        ("Category", 22, "f"), ("Headline GSI", 9, "in")]
+        ("Headline GSI", 9, "in")]
 for i in range(1, 6):
     COLS += [(f"Counts toward {i}", 20, "in"), (f"Score {i}", 7, "in")]
 COLS += [("Summary", 60, "in"), ("Source link", 30, "in"), ("Additional source", 24, "in"),
          ("Key incident", 9, "in"), ("Related New Lines link", 24, "in"),
-         ("Level", 12, "f"), ("Assessment", 24, "f"), ("Severity", 12, "f"),
-         ("Added on", 12, "in"), ("Notes", 30, "in"), ("Problems", 40, "f")]
+         ("Added on", 12, "in"), ("Notes", 30, "in"),
+         ("Week ending", 12, "f"), ("Category", 22, "f"), ("Level", 12, "f"), ("Assessment", 24, "f"),
+         ("Severity", 12, "f"), ("Problems", 40, "f")]
 COL = {h: get_column_letter(i) for i, (h, _, _) in enumerate(COLS, 1)}
 ENT_COLS = [COL[f"Counts toward {i}"] for i in range(1, 6)]
 SCO_COLS = [COL[f"Score {i}"] for i in range(1, 6)]
@@ -468,7 +471,7 @@ lines = [
     ("Each week", HEAD),
     ("1. Open the import page and load the final Weekly Incidents Word document (tracked changes accepted).", None),
     ("2. Review the rows it shows, then click \"Copy rows for Excel\".", None),
-    ("3. In Incidents, click the first empty cell in column A and paste. The grey columns fill in by themselves.", None),
+    ("3. In Incidents, click the first empty cell in column A and paste. The grey columns at the right fill in by themselves.", None),
     ("4. Check the Problems column for the new rows. Empty means fine.", None),
     ("5. Save. The site shows the new week from Friday 4:00pm ET.", None),
     ("", None),

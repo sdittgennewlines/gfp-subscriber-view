@@ -11,7 +11,7 @@ Run both again on a fresh export right before switching over. The script rebuild
 
 ## Sheets
 
-- **Incidents:** one row per incident. Purple-header columns are typed or pasted from the import page. Grey-header columns are formulas:
+- **Incidents:** one row per incident. Purple-header columns are typed or pasted from the import page. Grey-header columns sit at the right, so one paste from the import page never overwrites them. They are formulas:
   - Week ending;
   - Category;
   - Level, Assessment, Severity;
