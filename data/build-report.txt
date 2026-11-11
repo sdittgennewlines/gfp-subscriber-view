@@ -1,7 +1,7 @@
-Built 2026-11-11T03:45:38.945Z from CSV exports in work
-Published 2265 incidents through 2026-10-30.
+Built 2026-11-11T04:46:56.836Z from CSV exports in work-nov6
+Published 2325 incidents through 2026-11-06.
 
-Things to check in the sheet (27):
+Things to check in the sheet (28):
 - Row 154: "MENA" is ticked but "GSI MENA" has no number (not counted)
 - Row 156: "Global Climate" is ticked but "GSI Climate" has no number (not counted)
 - Row 188: "NATO" is ticked but "GSI NATO" has no number (not counted)
@@ -29,3 +29,4 @@ Things to check in the sheet (27):
 - Possible duplicate: "Volcanic eruption disrupts flights in Indonesia" (2026-09-06) appears more than once (types: Natural Disaster, Energy)
 - Possible duplicate: "Cuban delegation publicly confronts U.S. ambassador to U.N." (2026-10-19) appears more than once (types: Antagonistic rhetoric, Antagonistic rhetoric)
 - Possible duplicate: "Rubio calls on Cubans to work with the CIA to topple government" (2026-10-23) appears more than once (types: Antagonistic rhetoric, Antagonistic rhetoric)
+- Possible duplicate: "Cuba imports 562,000 barrels of oil from the U.S. in August" (2026-11-04) appears more than once (types: Economic Decline, Easing restrictions)
