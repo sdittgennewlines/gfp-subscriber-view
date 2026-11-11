@@ -20,8 +20,9 @@ const SKIP = new Set(["Antarctica", "Fr. S. Antarctic Lands", "N. Cyprus", "Soma
 const countries = new Set(world.countries.map((c) => MAP_TO_SHEET[c.name] || c.name).filter((n) => !SKIP.has(n)));
 incidents.forEach((i) => countries.add(i.location));
 // Every incident needs a real location: no "Multiple / regional" or Caribbean option.
-// Gaza is entered as a Place Detail. The EU counts as a location and is mapped to Brussels.
-["Caribbean", "Gaza"].forEach((x) => countries.delete(x));
+// Gaza is its own location. The EU counts as a location and is mapped to Brussels.
+countries.delete("Caribbean");
+countries.add("Gaza");
 ["Singapore", "Bahrain", "EU"].forEach((x) => countries.add(x));
 const countryList = [...countries].sort((a, b) => a.localeCompare(b));
 
@@ -92,7 +93,7 @@ function incidentBlock(n) {
   ];
   for (let i = 1; i <= 5; i++) {
     rows.push(row(i === 1 ? "Counts toward" : "", [marker(k(`entity${i}`)), sep(), tag("Score "), marker(k(`score${i}`))],
-      i === 1 ? { hint: "Each country, region, or theme whose GSI is affected. Leave unused lines empty." } : {}));
+      i === 1 ? { hint: "Each country, region, or theme whose GSI is affected. Leave blank if headline GSI only affects the Location. Leave unused lines empty." } : {}));
   }
   rows.push(
     row("Summary", [marker(k("summary"))], { required: true }),
