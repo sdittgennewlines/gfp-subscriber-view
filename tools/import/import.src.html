@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GFP import: Weekly Incidents → Excel master</title>
+<!--
+  GFP import page
+  ===============
+  Reads the final "Weekly Incidents" Word document (and, optionally, the Excel
+  master) and turns it into rows to paste:
+    1. into the master's Incidents sheet  ("Copy rows for Excel")
+    2. into the Mantis Google Sheet        ("Copy rows for Mantis")
+    3. into the master's Places sheet      ("Copy new places", only when needed)
+
+  Everything happens in this browser window: the files are never uploaded.
+  The page has no dependencies and works offline. Open it by double-clicking.
+
+  This file is generated: edit import.src.html, then run
+      node tools/import/build-import.mjs
+  which writes "GFP Import.html" with the dropdown lists filled in.
+
+  How the Word document is read
+  -----------------------------
+  Every field in the template is a Word content control with a hidden tag
+  such as "title#3" or "score2#3". The part before "#" names the field.
+  Copied tables keep the same tags, so incidents are told apart by TABLE,
+  not by the number after "#". If someone pasted text over a box, or next to
+  it, the row's label ("Summary", "Title"…) is used to recover the text, and
+  the incident is flagged so the text can be checked.
+-->
+<style>
+  :root { --ink:#1B1725; --muted:#5E5A66; --line:#CFCCC4; --wash:#F7F6F2; --purple:#5A4B80; --tint:#F0ECF8;
+          --red:#B8352B; --redbg:#FBE3DE; --amber:#8A5A00; --amberbg:#FFF3D6; --ok:#2F6B3A; --okbg:#E3F1E5; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 Arial, Helvetica, sans-serif; color: var(--ink); background: #fff; }
+  header { padding: 18px 28px 14px; border-bottom: 2px solid var(--ink); }
+  header .kicker { font-size: 11px; letter-spacing: .08em; font-weight: bold; color: #7A6528; }
+  header h1 { font: bold 26px Georgia, serif; margin: 2px 0 0; }
+  main { padding: 18px 28px 60px; max-width: 1500px; }
+  h2 { font: bold 18px Georgia, serif; margin: 26px 0 8px; }
+  .drops { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .drop { border: 2px dashed var(--line); border-radius: 8px; padding: 18px; background: var(--wash); cursor: pointer; }
+  .drop.over { border-color: var(--purple); background: var(--tint); }
+  .drop b { display: block; font-size: 15px; }
+  .drop .status { margin-top: 6px; color: var(--muted); }
+  .drop .status.good { color: var(--ok); } .drop .status.bad { color: var(--red); }
+  .note { color: var(--muted); font-size: 13px; }
+  .banner { padding: 10px 14px; border-radius: 6px; margin: 12px 0; }
+  .banner.bad { background: var(--redbg); color: #6E1712; } .banner.warn { background: var(--amberbg); color: #5A3B00; }
+  .banner.good { background: var(--okbg); color: #1E4A26; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+  button { font: bold 14px Arial; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--purple); background: var(--purple); color: #fff; cursor: pointer; }
+  button.secondary { background: #fff; color: var(--purple); }
+  button:disabled { opacity: .45; cursor: default; }
+  .copied { color: var(--ok); font-weight: bold; }
+  table.review { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.review th { text-align: left; background: #E3E1DC; padding: 6px 8px; position: sticky; top: 0; }
+  table.review td { border-top: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+  table.review tr.excluded td { opacity: .45; }
+  .pill { display: inline-block; border-radius: 10px; padding: 1px 8px; font-size: 12px; background: var(--tint); color: var(--purple); white-space: nowrap; }
+  .gsi { display: inline-block; min-width: 34px; text-align: center; border-radius: 4px; padding: 1px 4px; font-weight: bold; }
+  .issues { margin: 4px 0 0; padding-left: 16px; }
+  .issues li.error { color: var(--red); } .issues li.warn { color: var(--amber); }
+  .summary { color: var(--muted); max-width: 520px; }
+  .places td, .places th { padding: 5px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: middle; }
+  .places input[type=text], .places input[type=number] { font: 13px Arial; padding: 4px; width: 100%; }
+  .places select { font: 13px Arial; padding: 3px; max-width: 280px; }
+  #clip { position: fixed; left: -10000px; top: 0; }
+  details summary { cursor: pointer; color: var(--purple); }
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">NEW LINES INSTITUTE · GEOPOLITICAL FORECASTING AND ANALYSIS UNIT</div>
+  <h1>Weekly Incidents import</h1>
+</header>
+<main>
+  <p class="note">Your files stay on this computer: nothing is uploaded. Load the final Word document (all tracked changes accepted). Loading the Excel master is optional but lets this page catch incidents already in it, match places, and use your own Lists.</p>
+
+  <div class="drops">
+    <label class="drop" id="dropWord">
+      <b>1. Weekly Incidents Word document (.docx)</b>
+      <span class="note">Drop it here, or click to choose.</span>
+      <div class="status" id="statusWord">No document yet.</div>
+      <input type="file" accept=".docx" hidden id="fileWord">
+    </label>
+    <label class="drop" id="dropMaster">
+      <b>2. GFP Incidents Master (.xlsx), optional</b>
+      <span class="note">Drop it here, or click to choose. Use the latest saved copy.</span>
+      <div class="status" id="statusMaster">Not loaded: using the built-in lists.</div>
+      <input type="file" accept=".xlsx" hidden id="fileMaster">
+    </label>
+  </div>
+
+  <div id="out"></div>
+  <div id="clip"></div>
+</main>
+
+<script id="gfp-lists" type="application/json">/*LISTS*/</script>
+<script>
+"use strict";
+
+/* ==================================================================== DATA */
+
+// Built-in lists (filled in by build-import.mjs from the template's lists and the master's starter lists).
+const BUILTIN = JSON.parse(document.getElementById("gfp-lists").textContent);
+
+// The 23 countries, regions and themes, with their column names in the Mantis sheet.
+// [name in the template/master, Mantis checkbox column, Mantis score column, kind]
+// The order is the Mantis sheet's column order.
+const MANTIS_ENTITIES = [
+  ["Indo-Pacific", "Indopacific", "GSI Indopac", "region"],
+  ["Middle East & North Africa", "MENA", "GSI MENA", "region"],
+  ["NATO", "NATO", "GSI NATO", "region"],
+  ["US/Americas", "US/Americas", "GSI US/Americas", "region"],
+  ["Global Energy", "Global Energy", "GSI Energy", "theme"],
+  ["United States", "US", "GSI US", "country"],
+  ["China", "China", "GSI China", "country"],
+  ["Iran", "Iran", "GSI Iran", "country"],
+  ["Venezuela", "Venezuela", "GSI Venezuela", "country"],
+  ["India", "India", "GSI India", "country"],
+  ["Brazil", "Brazil", "GSI Brazil", "country"],
+  ["Canada", "Canada", "GSI Canada", "country"],
+  ["DR Congo", "DRC", "GSI DRC", "country"],
+  ["Ethiopia", "Ethiopia", "GSI Ethiopia", "country"],
+  ["France", "France", "GSI France", "country"],
+  ["Germany", "Germany", "GSI Germany", "country"],
+  ["Cuba", "Cuba", "GSI Cuba", "country"],
+  ["Indonesia", "Indonesia", "GSI Indonesia", "country"],
+  ["Mexico", "Mexico", "GSI Mexico", "country"],
+  ["Myanmar", "Myanmar", "GSI Myanmar", "country"],
+  ["Sudan", "Sudan", "GSI Sudan", "country"],
+  ["Global Climate", "Global Climate", "GSI Climate", "theme"],
+];
+// Taiwan is a spotlight country but has no Mantis columns.
+const KIND = Object.fromEntries([...MANTIS_ENTITIES.map((e) => [e[0], e[3]]), ["Taiwan", "country"]]);
+const SPOTLIGHT = new Set(Object.keys(KIND).filter((k) => KIND[k] === "country"));
+const SCORES = [-90, -70, -50, -30, -10, 0, 10, 30, 50, 70, 90];
+
+// Columns of the master's Incidents sheet that are pasted (the purple ones), in order.
+const EXCEL_COLUMNS = ["ID", "Date", "Title", "Location", "Place Detail", "Type", "Secondary type", "Headline GSI",
+  "Counts toward 1", "Score 1", "Counts toward 2", "Score 2", "Counts toward 3", "Score 3",
+  "Counts toward 4", "Score 4", "Counts toward 5", "Score 5",
+  "Summary", "Source link", "Additional source", "Key incident", "Related New Lines link", "Added on", "Notes"];
+
+// Columns of the Mantis sheet ("Incidents - Global"), in order.
+const MANTIS_COLUMNS = ["Date & Time", "Scope", "Scenario", "Type", "Severity", "Location", "Title", "Description", "Link", "GSI",
+  ...MANTIS_ENTITIES.flatMap((e) => [e[1], e[2]]), "GSI Review Comments (Week of 4/10)", "Link2"];
+
+// What each row label in the Word tables holds (labels lose their " *").
+const LABEL_FIELD = { "Title": "title", "Date": "date", "Type": "type", "Headline GSI": "gsi", "Summary": "summary",
+  "Source link": "link", "Additional source": "link2", "Key Incident?": "featured", "Related New Lines link": "related" };
+
+// The template's filled-in example (skipped when it is still in the document).
+const EXAMPLE_TITLE = "Indonesia reduces natural gas exports to Singapore";
+
+/* Lists in use: the master's when it is loaded, otherwise the built-in ones. */
+let LISTS = structuredClone(BUILTIN);
+let MASTER = null;   // { ids:Set, byTitleDate:Map, byLink:Map, count, lastWeek }
+let DOC = null;      // { name, weekEnding, incidents:[…], errors:[…] }
+
+/* ============================================================== UTILITIES */
+
+const $ = (sel) => document.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const clean = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
+const norm = (s) => clean(s).toLowerCase().replace(/[.,'’"()]/g, "");
+
+/** The same short hash the site uses for incident IDs (FNV-1a, base 36), so IDs match. */
+function hash(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(36);
+}
+
+/** "2026-11-05" → the Friday ending its Saturday-to-Friday week, as "2026-11-06". */
+function weekEnding(iso) {
+  const d = new Date(iso + "T00:00:00Z");
+  const add = (5 - d.getUTCDay() + 7) % 7; // 5 = Friday
+  d.setUTCDate(d.getUTCDate() + add);
+  return d.toISOString().slice(0, 10);
+}
+const todayIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const mdy = (iso) => { const [y, m, d] = iso.split("-").map(Number); return `${m}/${d}/${y}`; };
+const longDate = (iso) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+
+/** A score from Word ("−30", "+10", "0") as a number, or null. */
+function score(s) {
+  const t = clean(s).replace(/[−–—]/g, "-").replace(/^\+/, "");
+  if (t === "") return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** A date typed by hand ("October 26, 2026", "10/26/2026", "2026-10-26") as ISO, or "". */
+function parseDate(s) {
+  const t = clean(s);
+  if (!t) return "";
+  let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (m) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  const d = new Date(t + " UTC");
+  return isNaN(d) ? "" : d.toISOString().slice(0, 10);
+}
+
+/* ========================================== wording (same rules as the site) */
+
+function severityOf(v) {
+  if (v === null || !Number.isFinite(v)) return "";
+  const a = Math.abs(v);
+  if (a < 5) return "";
+  return ["Low", "Low/Medium", "Medium", "Medium/High", "High"][a < 20 ? 0 : a < 40 ? 1 : a < 60 ? 2 : a < 80 ? 3 : 4];
+}
+function levelOf(entities) {
+  const kinds = entities.map((e) => KIND[e]).filter(Boolean);
+  if (kinds.includes("theme")) return "Global";
+  if (kinds.includes("region") || kinds.filter((k) => k === "country").length >= 2) return "International";
+  return "Country";
+}
+const WORDS = { Country: ["destabilization", "stabilization"], International: ["escalation", "de-escalation"], Global: ["disruption", "enhancement"] };
+function assessment(v, level) {
+  if (v === null || !Number.isFinite(v)) return "";
+  if (Math.abs(v) < 5) return "Status quo";
+  const sev = severityOf(v).replace("/M", "/m").replace("/H", "/h");
+  return `${sev} ${WORDS[level][v < 0 ? 0 : 1]}`;
+}
+// The map's colours for a GSI value.
+function gsiColour(v) {
+  const bands = [[-60, "#8E1B17", "#fff"], [-40, "#B8352B", "#fff"], [-20, "#D9705F", "#1B1725"], [-5, "#F0B3A5", "#1B1725"],
+    [5, "#E6E0F4", "#1B1725"], [20, "#B7CDEA", "#1B1725"], [40, "#7FA6D8", "#1B1725"], [60, "#4277BE", "#fff"], [Infinity, "#1F4E8C", "#fff"]];
+  const b = bands.find(([max]) => v <= max);
+  return `background:${b[1]};color:${b[2]}`;
+}
+
+/* ============================================ reading .docx / .xlsx (zip files) */
+
+/** Unzips the entries we ask for. Uses the browser's built-in decompressor. */
+async function unzip(buffer, wanted) {
+  const view = new DataView(buffer), bytes = new Uint8Array(buffer);
+  let eocd = -1;
+  for (let i = buffer.byteLength - 22; i >= Math.max(0, buffer.byteLength - 65557); i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("This isn't a Word or Excel file (it can't be opened as one).");
+  const count = view.getUint16(eocd + 10, true);
+  let p = view.getUint32(eocd + 16, true);
+  const out = {};
+  const dec = new TextDecoder();
+  for (let n = 0; n < count; n++) {
+    const method = view.getUint16(p + 10, true), size = view.getUint32(p + 20, true);
+    const nameLen = view.getUint16(p + 28, true), extraLen = view.getUint16(p + 30, true), commentLen = view.getUint16(p + 32, true);
+    const local = view.getUint32(p + 42, true);
+    const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + commentLen;
+    if (!wanted(name)) continue;
+    const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    const data = bytes.subarray(start, start + size);
+    if (method === 0) out[name] = dec.decode(data);
+    else if (method === 8) {
+      const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      out[name] = await new Response(stream).text();
+    } else throw new Error(`Unsupported compression in ${name}.`);
+  }
+  return out;
+}
+
+const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const xml = (s) => new DOMParser().parseFromString(s, "application/xml");
+const kids = (el, name) => Array.from(el.childNodes).filter((c) => c.nodeType === 1 && c.namespaceURI === W && c.localName === name);
+const all = (el, name) => Array.from(el.getElementsByTagNameNS(W, name));
+const wattr = (el, name) => el?.getAttributeNS(W, name) ?? el?.getAttribute("w:" + name) ?? null;
+
+/** Text of an element: runs' text, tabs as spaces, line breaks as new lines. */
+function textOf(el, { skipSdt = false } = {}) {
+  let s = "";
+  (function walk(node) {
+    for (const c of node.childNodes) {
+      if (c.nodeType !== 1) continue;
+      if (c.namespaceURI === W) {
+        if (skipSdt && c.localName === "sdt") continue;
+        if (c.localName === "t") s += c.textContent;
+        else if (c.localName === "tab") s += " ";
+        else if (c.localName === "br" || c.localName === "cr") s += "\n";
+        else if (c.localName === "p") { if (s && !s.endsWith("\n")) s += "\n"; walk(c); continue; }
+        else if (c.localName === "delText" || c.localName === "instrText") continue;
+      }
+      walk(c);
+    }
+  })(el);
+  return s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** A content control's field name, value, and whether it still shows its placeholder. */
+function readControl(sdt) {
+  const pr = kids(sdt, "sdtPr")[0];
+  const tag = wattr(pr && kids(pr, "tag")[0], "val") || "";
+  const field = tag.split("#")[0];
+  const placeholder = pr && kids(pr, "showingPlcHdr").length > 0;
+  const content = kids(sdt, "sdtContent")[0];
+  let value = placeholder || !content ? "" : textOf(content);
+  // Dropdowns: map the shown text back to the stored value ("EU (Brussels)" → "EU").
+  const items = pr ? all(pr, "listItem") : [];
+  const hit = items.find((it) => wattr(it, "displayText") === value);
+  if (hit && wattr(hit, "value")) value = wattr(hit, "value");
+  // Dates: the picker stores an exact date.
+  const dateEl = pr && kids(pr, "date")[0];
+  if (dateEl && value) value = (wattr(dateEl, "fullDate") || "").slice(0, 10) || parseDate(value);
+  return { tag, field, value: clean(field === "summary" ? value.replace(/\n+/g, " ") : value), raw: value };
+}
+
+/* ========================================================== the Word document */
+
+async function readWord(file) {
+  const files = await unzip(await file.arrayBuffer(), (n) => n === "word/document.xml");
+  if (!files["word/document.xml"]) throw new Error("This doesn't look like a Word document (.docx).");
+  const doc = xml(files["word/document.xml"]);
+  const errors = [];
+
+  // 1. Open tracked changes: refuse, so nothing half-edited gets imported.
+  const tracked = ["ins", "del", "moveFrom", "moveTo"].reduce((n, t) => n + all(doc, t).length, 0);
+  if (tracked) errors.push(`This document still has ${tracked} tracked change${tracked > 1 ? "s" : ""}. In Word: Review → Accept → Accept All Changes, save, and load it again.`);
+
+  // 2. Week ending, from the box at the top.
+  let week = "";
+  for (const sdt of all(doc, "sdt")) {
+    const c = readControl(sdt);
+    if (c.field === "week_ending") { week = c.value; break; }
+  }
+
+  // 3. One incident per table.
+  const incidents = [];
+  let n = 0;
+  for (const tbl of all(doc, "tbl")) {
+    const inc = readTable(tbl);
+    if (!inc) continue;                                   // not an incident table
+    if (inc.empty) continue;                              // an unused empty table
+    if (inc.example && inc.title === EXAMPLE_TITLE) continue; // the template's example, untouched
+    inc.n = ++n;
+    incidents.push(inc);
+  }
+  return { name: file.name, weekEnding: week, incidents, errors };
+}
+
+/** Reads one incident table. Returns null if the table isn't an incident table. */
+function readTable(tbl) {
+  const inc = { entities: Array(5).fill(""), scores: Array(5).fill(""), notes: [], example: false };
+  let isIncident = false, anything = false;
+  for (const tr of kids(tbl, "tr")) {
+    const cells = kids(tr, "tc");
+    if (cells.length < 2) continue;
+    const label = clean(textOf(cells[0]).split("\n")[0]).replace(/\s*\*$/, "");
+    const value = cells[1];
+    const controls = all(value, "sdt").map(readControl).filter((c) => c.field);
+    for (const c of controls) {
+      isIncident = true;
+      if (c.tag.endsWith("#0")) inc.example = true;
+      if (c.value) anything = true;
+      const m = c.field.match(/^(entity|score)(\d)$/);
+      if (m) (m[1] === "entity" ? inc.entities : inc.scores)[Number(m[2]) - 1] = c.value;
+      else inc[c.field] = c.value;
+    }
+    // Text in the cell but outside its box(es): pasted next to the box, or over it.
+    const outside = clean(textOf(value, { skipSdt: true }).replace(/Place Detail|Score/g, ""));
+    if (outside) {
+      anything = true;
+      const field = LABEL_FIELD[label];
+      if (field && !inc[field]) {
+        inc[field] = field === "date" ? parseDate(outside) : outside;
+        inc.notes.push(["warn", `${label}: the text was outside its box (pasted over or next to it). It was used; check it.`]);
+        if (label === "Title") isIncident = true;
+      } else {
+        inc.notes.push(["warn", `${label || "A row"} has text outside its box, which was ignored: “${outside.slice(0, 80)}”`]);
+      }
+    }
+    if (label === "Title") isIncident = true;
+  }
+  if (!isIncident) return null;
+  inc.empty = !anything;
+  return inc;
+}
+
+/* ===================================================== checking an incident */
+
+function prepare(inc) {
+  const issues = inc.notes.slice();
+  const err = (m) => issues.push(["error", m]), warn = (m) => issues.push(["warn", m]);
+
+  inc.title = clean(inc.title);
+  inc.date = inc.date || "";
+  inc.country = clean(inc.country);
+  inc.gsiNum = score(inc.gsi);
+
+  if (!inc.title) err("No title.");
+  if (!inc.date) err("No date.");
+  if (!inc.country) err("No location.");
+  else if (!LISTS.locations.includes(inc.country)) err(`Location “${inc.country}” isn't on the list.`);
+  if (!inc.type) err("No type.");
+  else if (!LISTS.types[inc.type]) err(`Type “${inc.type}” isn't on the list.`);
+  if (inc.gsiNum === null) err("No headline GSI.");
+  else if (!SCORES.includes(inc.gsiNum)) err(`Headline GSI “${inc.gsi}” isn't one of −90 … +90.`);
+  if (!inc.summary) err("No summary.");
+  if (!inc.link) err("No source link.");
+  else if (!/^https?:\/\//i.test(inc.link)) warn("The source link doesn't start with http.");
+  if (inc.link2 && !/^https?:\/\//i.test(inc.link2)) warn("The additional source doesn't start with http.");
+
+  // Counts toward lines.
+  inc.lines = [];
+  const seen = new Set();
+  for (let i = 0; i < 5; i++) {
+    const e = clean(inc.entities[i]), s = score(inc.scores[i]);
+    if (!e && s === null) continue;
+    if (e && s === null) { err(`Counts toward “${e}” has no score.`); continue; }
+    if (!e) { err(`A score (${inc.scores[i]}) has no country, region or theme.`); continue; }
+    if (!(e in KIND)) { err(`“${e}” isn't one of the countries, regions or themes.`); continue; }
+    if (!SCORES.includes(s)) { err(`The score for ${e} isn't one of −90 … +90.`); continue; }
+    if (seen.has(e)) { err(`${e} is listed twice.`); continue; }
+    seen.add(e);
+    inc.lines.push([e, s]);
+  }
+  // Blank lines: the headline counts toward the Location if it is a spotlight country.
+  inc.effective = inc.lines.length ? inc.lines
+    : SPOTLIGHT.has(inc.country) && Number.isFinite(inc.gsiNum) ? [[inc.country, inc.gsiNum]] : [];
+
+  // Week.
+  if (inc.date) {
+    inc.week = weekEnding(inc.date);
+    if (DOC.weekEnding && inc.week !== DOC.weekEnding) warn(`Dated ${longDate(inc.date)}, outside the week ending ${longDate(DOC.weekEnding)}.`);
+  }
+  inc.level = levelOf(inc.lines.map((l) => l[0]));
+  inc.assessment = assessment(inc.gsiNum, inc.level);
+  inc.severity = severityOf(inc.gsiNum);
+  inc.category = LISTS.types[inc.type] || "";
+  inc.featured = /^yes$/i.test(clean(inc.featured)) ? "Yes" : "";
+  inc.id = inc.date ? `${inc.date}-${hash(inc.title + "|" + clean(inc.link))}` : "";
+
+  // Place Detail → a standard place.
+  inc.placeRaw = clean(inc.place);
+  inc.placeMatch = inc.placeRaw ? matchPlace(inc.placeRaw) : null;
+
+  // Duplicates: in this document, and in the master.
+  if (MASTER && inc.date) {
+    if (MASTER.ids.has(inc.id)) err("Already in the master (same title, date and link).");
+    else if (MASTER.byTitleDate.has(norm(inc.title) + "|" + inc.date)) warn("The master already has an incident with this title and date.");
+    else if (inc.link && MASTER.byLink.has(norm(inc.link))) warn(`The master already uses this source link (“${MASTER.byLink.get(norm(inc.link))}”).`);
+  }
+  inc.issues = issues;
+  return inc;
+}
+
+function checkDuplicatesInDoc(incidents) {
+  const byTitle = new Map(), byLink = new Map();
+  for (const inc of incidents) {
+    const t = norm(inc.title), l = norm(inc.link);
+    if (t) { if (byTitle.has(t)) inc.issues.push(["warn", `Same title as incident ${byTitle.get(t)} in this document.`]); else byTitle.set(t, inc.n); }
+    if (l) { if (byLink.has(l)) inc.issues.push(["warn", `Same source link as incident ${byLink.get(l)} in this document.`]); else byLink.set(l, inc.n); }
+  }
+}
+
+/* ================================================================== places */
+
+function placeIndex() {
+  const idx = new Map();
+  for (const p of LISTS.places) {
+    idx.set(norm(p.name), p);
+    for (const a of (p.aliases || "").split(";")) if (clean(a)) idx.set(norm(a), p);
+  }
+  return idx;
+}
+let PLACE_INDEX = placeIndex();
+const matchPlace = (raw) => PLACE_INDEX.get(norm(raw)) || null;
+
+// Choices for unmatched places: { raw → { action: "new"|"match"|"skip", name, lat, lon, match } }
+let PLACE_CHOICES = {};
+
+/* ==================================================================== master */
+
+async function readMaster(file) {
+  const files = await unzip(await file.arrayBuffer(),
+    (n) => n === "xl/workbook.xml" || n === "xl/_rels/workbook.xml.rels" || n === "xl/sharedStrings.xml" || /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  if (!files["xl/workbook.xml"]) throw new Error("This doesn't look like an Excel file (.xlsx).");
+  const strings = files["xl/sharedStrings.xml"]
+    ? Array.from(xml(files["xl/sharedStrings.xml"]).getElementsByTagName("si")).map((si) => Array.from(si.getElementsByTagName("t")).map((t) => t.textContent).join(""))
+    : [];
+  const rels = {};
+  for (const r of xml(files["xl/_rels/workbook.xml.rels"]).getElementsByTagName("Relationship")) rels[r.getAttribute("Id")] = r.getAttribute("Target");
+  const sheets = {};
+  for (const s of xml(files["xl/workbook.xml"]).getElementsByTagName("sheet")) {
+    const rid = s.getAttribute("r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+    const target = rels[rid].replace(/^\/?(xl\/)?/, "xl/");
+    sheets[s.getAttribute("name")] = files[target];
+  }
+  const read = (name) => {   // → array of rows, each { colLetter: value }
+    if (!sheets[name]) return null;
+    const rows = [];
+    for (const row of xml(sheets[name]).getElementsByTagName("row")) {
+      const r = {};
+      for (const c of row.getElementsByTagName("c")) {
+        const col = c.getAttribute("r").replace(/\d+/g, ""), t = c.getAttribute("t");
+        let v;
+        if (t === "s") v = strings[Number(c.getElementsByTagName("v")[0]?.textContent)];
+        else if (t === "inlineStr") v = Array.from(c.getElementsByTagName("t")).map((x) => x.textContent).join("");
+        else v = c.getElementsByTagName("v")[0]?.textContent;
+        if (v !== undefined && v !== "") r[col] = v;
+      }
+      rows[Number(row.getAttribute("r")) - 1] = r;
+    }
+    return rows;
+  };
+  const byHeader = (rows) => {   // header name → column letter
+    const h = {};
+    for (const [col, v] of Object.entries(rows[0] || {})) h[v] = col;
+    return h;
+  };
+  const serial = (v) => { const n = Number(v); return Number.isFinite(n) && n > 20000 ? new Date(Date.UTC(1899, 11, 30) + n * 864e5).toISOString().slice(0, 10) : parseDate(v); };
+
+  const inc = read("Incidents");
+  if (!inc) throw new Error("This workbook has no “Incidents” sheet. Is it the GFP Incidents Master?");
+  const H = byHeader(inc);
+  for (const need of ["ID", "Date", "Title", "Source link"]) if (!H[need]) throw new Error(`The Incidents sheet has no “${need}” column.`);
+  const master = { ids: new Set(), byTitleDate: new Map(), byLink: new Map(), count: 0, lastDate: "" };
+  for (const r of inc.slice(1)) {
+    if (!r || !r[H.ID]) continue;
+    master.count++;
+    master.ids.add(r[H.ID]);
+    const d = serial(r[H.Date]);
+    if (d > master.lastDate) master.lastDate = d;
+    master.byTitleDate.set(norm(r[H.Title]) + "|" + d, r[H.ID]);
+    if (r[H["Source link"]]) master.byLink.set(norm(r[H["Source link"]]), r[H.Title]);
+  }
+
+  // Lists and Places from the master replace the built-in ones.
+  const lists = structuredClone(BUILTIN);
+  const ls = read("Lists");
+  if (ls) {
+    const h = byHeader(ls);
+    const col = (name) => ls.slice(1).map((r) => r && r[h[name]]).filter(Boolean);
+    if (h.Location) lists.locations = col("Location");
+    if (h.Type && h.Category) {
+      lists.types = {};
+      for (const r of ls.slice(1)) if (r && r[h.Type]) lists.types[r[h.Type]] = r[h.Category] || "";
+    }
+  }
+  const pl = read("Places");
+  if (pl) {
+    const h = byHeader(pl);
+    const alias = Object.keys(h).find((k) => k.startsWith("Also written as"));
+    lists.places = pl.slice(1).filter((r) => r && r[h["Standard place"]]).map((r) => ({
+      name: r[h["Standard place"]], location: r[h.Location] || "", lat: r[h.Latitude] || "", lon: r[h.Longitude] || "", aliases: alias ? r[h[alias]] || "" : "" }));
+  }
+  return { master, lists };
+}
+
+/* ================================================================= outputs */
+
+function excelRows(list) {
+  const added = todayIso();
+  return list.map((inc) => {
+    const place = placeFor(inc);
+    const row = {
+      "ID": inc.id, "Date": inc.date, "Title": inc.title, "Location": inc.country, "Place Detail": place, "Type": inc.type,
+      "Secondary type": "", "Headline GSI": Number.isFinite(inc.gsiNum) ? inc.gsiNum : "",
+      "Summary": inc.summary, "Source link": inc.link, "Additional source": inc.link2 || "", "Key incident": inc.featured,
+      "Related New Lines link": inc.related || "", "Added on": added, "Notes": "",
+    };
+    inc.lines.forEach(([e, s], i) => { row[`Counts toward ${i + 1}`] = e; row[`Score ${i + 1}`] = s; });
+    return EXCEL_COLUMNS.map((c) => row[c] ?? "");
+  });
+}
+
+function mantisRows(list) {
+  return list.map((inc) => {
+    const scope = inc.level === "Global" ? "Global / Thematic" : inc.level;
+    const scenario = !Number.isFinite(inc.gsiNum) ? "" : inc.gsiNum < 0 ? "Escalation" : inc.gsiNum > 0 ? "De-escalation" : "Status quo";
+    const sev = Number.isFinite(inc.gsiNum) ? (severityOf(inc.gsiNum) || "Low").replace("/", " / ") : "";
+    const row = {
+      "Date & Time": inc.date ? mdy(inc.date) : "", "Scope": scope, "Scenario": scenario, "Type": inc.type, "Severity": sev,
+      "Location": inc.country, "Title": inc.title, "Description": inc.summary, "Link": inc.link,
+      "GSI": Number.isFinite(inc.gsiNum) ? inc.gsiNum : "", "Link2": inc.link2 || "",
+    };
+    const eff = Object.fromEntries(inc.effective);
+    for (const [name, check, sc] of MANTIS_ENTITIES) if (name in eff) { row[check] = "Yes"; row[sc] = eff[name]; }
+    return MANTIS_COLUMNS.map((c) => row[c] ?? "");
+  });
+}
+
+/** The Place Detail to write: the standard place, a new place's name, or nothing. */
+function placeFor(inc) {
+  if (!inc.placeRaw) return "";
+  if (inc.placeMatch) return inc.placeMatch.name;
+  const ch = PLACE_CHOICES[norm(inc.placeRaw)];
+  if (!ch || ch.action === "skip") return "";
+  if (ch.action === "match") return ch.match;
+  return clean(ch.name) || inc.placeRaw;
+}
+
+function newPlaceRows() {
+  const rows = [];
+  for (const [key, ch] of Object.entries(PLACE_CHOICES)) {
+    if (ch.action !== "new" || !ch.used) continue;
+    rows.push([clean(ch.name) || ch.raw, ch.location, ch.lat === "" ? "" : Number(ch.lat), ch.lon === "" ? "" : Number(ch.lon),
+      norm(ch.name) === key ? "" : ch.raw]);
+  }
+  return rows;
+}
+
+/** Copies rows as an HTML table (what Excel and Google Sheets paste best) plus tab-separated text. */
+function copyRows(rows, { textCols = [] } = {}) {
+  const cell = (v, i) => `<td${textCols.includes(i) ? ' style="mso-number-format:\'\\@\'"' : ""}>${esc(v)}</td>`;
+  const html = `<table>${rows.map((r) => `<tr>${r.map(cell).join("")}</tr>`).join("")}</table>`;
+  const tsv = rows.map((r) => r.map((v) => String(v).replace(/[\t\r\n]+/g, " ")).join("\t")).join("\n");
+  const onCopy = (e) => { e.clipboardData.setData("text/html", html); e.clipboardData.setData("text/plain", tsv); e.preventDefault(); };
+  document.addEventListener("copy", onCopy);
+  const ok = document.execCommand("copy");
+  document.removeEventListener("copy", onCopy);
+  return ok;
+}
+
+/* ================================================================= screen */
+
+function render() {
+  const out = $("#out");
+  if (!DOC) { out.innerHTML = ""; return; }
+  if (DOC.errors.length) {
+    out.innerHTML = DOC.errors.map((e) => `<div class="banner bad">${esc(e)}</div>`).join("");
+    return;
+  }
+  const list = DOC.incidents;
+  if (!list.length) { out.innerHTML = `<div class="banner bad">No filled-in incidents found in “${esc(DOC.name)}”. Is it the Weekly Incidents template?</div>`; return; }
+
+  // Unmatched places, once each.
+  const unmatched = new Map();
+  for (const inc of list) if (inc.placeRaw && !inc.placeMatch && inc.include) {
+    const k = norm(inc.placeRaw);
+    if (!unmatched.has(k)) unmatched.set(k, { raw: inc.placeRaw, location: inc.country });
+  }
+  for (const [k, u] of unmatched) PLACE_CHOICES[k] = PLACE_CHOICES[k] || { action: "new", name: u.raw, raw: u.raw, location: u.location, lat: "", lon: "", match: "" };
+  for (const [k, ch] of Object.entries(PLACE_CHOICES)) ch.used = unmatched.has(k);
+
+  const included = list.filter((i) => i.include);
+  const errors = included.filter((i) => i.issues.some((x) => x[0] === "error")).length;
+  const warns = included.filter((i) => i.issues.some((x) => x[0] === "warn") && !i.issues.some((x) => x[0] === "error")).length;
+  const weekNote = DOC.weekEnding ? `week ending ${longDate(DOC.weekEnding)}` : "no week ending chosen at the top of the document";
+
+  let html = `<h2>${list.length} incident${list.length > 1 ? "s" : ""} in “${esc(DOC.name)}” (${weekNote})</h2>`;
+  html += errors ? `<div class="banner bad"><b>${errors} incident${errors > 1 ? "s have" : " has"} problems</b> (in red). Fix them in Word and load the document again, or untick them to leave them out.</div>`
+    : `<div class="banner good">No blocking problems.</div>`;
+  if (warns) html += `<div class="banner warn">${warns} incident${warns > 1 ? "s have" : " has"} something to check (in amber). They can be copied as they are.</div>`;
+  if (!MASTER) html += `<div class="banner warn">The master isn't loaded, so incidents already in it can't be caught.</div>`;
+
+  html += `<div class="actions">
+      <button id="copyExcel">Copy rows for Excel</button>
+      <button id="copyMantis" class="secondary">Copy rows for Mantis</button>
+      ${unmatched.size ? `<button id="copyPlaces" class="secondary">Copy new places</button>` : ""}
+      <span id="copyStatus"></span></div>
+    <p class="note">Excel: click the first empty cell in column A of the Incidents sheet, then paste. Mantis: click the first empty cell in column A of “Incidents - Global”, then paste.${unmatched.size ? " New places: first empty row of the Places sheet." : ""}</p>`;
+
+  if (unmatched.size) {
+    html += `<h2>Places not on the list (${unmatched.size})</h2>
+      <p class="note">Match each to a standard place, or add it as a new one. Coordinates are optional (find them by searching the place on a map). Without them the map uses the country.</p>
+      <table class="places"><tr><th>Written as</th><th>What to do</th><th>Standard name</th><th>Latitude</th><th>Longitude</th></tr>`;
+    const options = LISTS.places.map((p) => `<option value="${esc(p.name)}">${esc(p.name)} (${esc(p.location)})</option>`).join("");
+    for (const [k, u] of unmatched) {
+      const ch = PLACE_CHOICES[k];
+      html += `<tr data-place="${esc(k)}">
+        <td>${esc(u.raw)} <span class="note">(${esc(u.location)})</span></td>
+        <td><select data-f="action">
+            <option value="new"${ch.action === "new" ? " selected" : ""}>Add as a new place</option>
+            <option value="match"${ch.action === "match" ? " selected" : ""}>Same as a place on the list…</option>
+            <option value="skip"${ch.action === "skip" ? " selected" : ""}>Leave Place Detail empty</option></select>
+            ${ch.action === "match" ? `<select data-f="match"><option value="">Choose…</option>${options.replace(`value="${esc(ch.match)}"`, `value="${esc(ch.match)}" selected`)}</select>` : ""}</td>
+        <td>${ch.action === "new" ? `<input type="text" data-f="name" value="${esc(ch.name)}">` : ""}</td>
+        <td>${ch.action === "new" ? `<input type="number" step="any" data-f="lat" value="${esc(ch.lat)}">` : ""}</td>
+        <td>${ch.action === "new" ? `<input type="number" step="any" data-f="lon" value="${esc(ch.lon)}">` : ""}</td></tr>`;
+    }
+    html += `</table>`;
+  }
+
+  html += `<h2>Review</h2><table class="review"><tr><th></th><th>#</th><th>Incident</th><th>Location</th><th>GSI</th><th>Counts toward</th><th>Assessment</th><th>Checks</th></tr>`;
+  for (const inc of list) {
+    const lines = inc.lines.length ? inc.lines.map(([e, s]) => `${esc(e)} ${s > 0 ? "+" + s : s}`).join("<br>")
+      : inc.effective.length ? `<span class="note">Blank, so it counts toward ${esc(inc.country)} ${inc.gsiNum > 0 ? "+" + inc.gsiNum : inc.gsiNum}</span>`
+      : `<span class="note">Blank: counts toward no GSI</span>`;
+    const place = placeFor(inc);
+    html += `<tr class="${inc.include ? "" : "excluded"}">
+      <td><input type="checkbox" data-include="${inc.n}"${inc.include ? " checked" : ""} title="Include in the copied rows"></td>
+      <td>${inc.n}</td>
+      <td><b>${esc(inc.title) || "<i>No title</i>"}</b><br><span class="note">${inc.date ? longDate(inc.date) : "No date"} · ${esc(inc.type) || "No type"}${inc.category ? " · " + esc(inc.category) : ""}${inc.featured ? ' · <span class="pill">Key incident</span>' : ""}</span>
+          <div class="summary">${esc((inc.summary || "").slice(0, 220))}${(inc.summary || "").length > 220 ? "…" : ""}</div></td>
+      <td>${esc(inc.country)}${place ? `<br><span class="note">${esc(place)}${inc.placeRaw && norm(place) !== norm(inc.placeRaw) ? ` (written “${esc(inc.placeRaw)}”)` : ""}</span>` : ""}</td>
+      <td>${Number.isFinite(inc.gsiNum) ? `<span class="gsi" style="${gsiColour(inc.gsiNum)}">${inc.gsiNum > 0 ? "+" + inc.gsiNum : inc.gsiNum}</span>` : ""}</td>
+      <td>${lines}</td>
+      <td>${esc(inc.assessment)}<br><span class="note">${esc(inc.level)} level</span></td>
+      <td>${inc.issues.length ? `<ul class="issues">${inc.issues.map(([k, m]) => `<li class="${k}">${esc(m)}</li>`).join("")}</ul>` : '<span class="copied">OK</span>'}</td></tr>`;
+  }
+  html += `</table>`;
+  out.innerHTML = html;
+
+  // Wire up.
+  const status = (msg) => { $("#copyStatus").innerHTML = msg; };
+  $("#copyExcel").onclick = () => {
+    const rows = excelRows(included);
+    status(copyRows(rows, { textCols: [0] }) ? `<span class="copied">Copied ${rows.length} rows for Excel.</span>` : "Copy didn't work in this browser.");
+  };
+  $("#copyMantis").onclick = () => {
+    const rows = mantisRows(included);
+    status(copyRows(rows) ? `<span class="copied">Copied ${rows.length} rows for Mantis.</span>` : "Copy didn't work in this browser.");
+  };
+  if ($("#copyPlaces")) $("#copyPlaces").onclick = () => {
+    const rows = newPlaceRows();
+    status(rows.length ? (copyRows(rows) ? `<span class="copied">Copied ${rows.length} new place${rows.length > 1 ? "s" : ""}.</span>` : "Copy didn't work.") : "No places are set to “Add as a new place”.");
+  };
+  out.querySelectorAll("[data-include]").forEach((cb) => cb.onchange = () => {
+    list.find((i) => i.n === Number(cb.dataset.include)).include = cb.checked; render();
+  });
+  out.querySelectorAll("tr[data-place]").forEach((tr) => {
+    const ch = PLACE_CHOICES[tr.dataset.place];
+    tr.querySelectorAll("[data-f]").forEach((el) => {
+      el.onchange = () => { ch[el.dataset.f] = el.value; if (el.tagName === "SELECT") render(); };
+    });
+  });
+}
+
+/* ================================================================== loading */
+
+async function loadWord(file) {
+  const st = $("#statusWord");
+  st.className = "status"; st.textContent = "Reading…";
+  try {
+    DOC = await readWord(file);
+    PLACE_CHOICES = {};
+    refresh();
+    st.className = "status " + (DOC.errors.length ? "bad" : "good");
+    st.textContent = DOC.errors.length ? `${file.name}: can't be imported yet (see below).` : `${file.name}: ${DOC.incidents.length} incidents.`;
+  } catch (e) {
+    DOC = null; render();
+    st.className = "status bad"; st.textContent = e.message;
+  }
+}
+
+async function loadMaster(file) {
+  const st = $("#statusMaster");
+  st.className = "status"; st.textContent = "Reading…";
+  try {
+    const { master, lists } = await readMaster(file);
+    MASTER = master; LISTS = lists; PLACE_INDEX = placeIndex();
+    st.className = "status good";
+    st.textContent = `${file.name}: ${master.count.toLocaleString()} incidents, the latest dated ${master.lastDate ? longDate(master.lastDate) : "?"}; ${lists.places.length} standard places.`;
+    refresh();
+  } catch (e) {
+    MASTER = null; LISTS = structuredClone(BUILTIN); PLACE_INDEX = placeIndex();
+    st.className = "status bad"; st.textContent = e.message;
+    refresh();
+  }
+}
+
+/** Re-checks the incidents (after loading either file) and redraws. */
+function refresh() {
+  if (DOC && !DOC.errors.length) {
+    for (const inc of DOC.incidents) { inc.issues = []; prepare(inc); if (inc.include === undefined) inc.include = true; }
+    checkDuplicatesInDoc(DOC.incidents);
+  }
+  render();
+}
+
+function dropZone(zone, input, load) {
+  input.onchange = () => input.files[0] && load(input.files[0]);
+  zone.ondragover = (e) => { e.preventDefault(); zone.classList.add("over"); };
+  zone.ondragleave = () => zone.classList.remove("over");
+  zone.ondrop = (e) => { e.preventDefault(); zone.classList.remove("over"); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+}
+dropZone($("#dropWord"), $("#fileWord"), loadWord);
+dropZone($("#dropMaster"), $("#fileMaster"), loadMaster);
+</script>
+</body>
+</html>
