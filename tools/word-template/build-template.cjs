@@ -15,10 +15,10 @@ const world = require(`${REPO}/data/world.json`);
 const types = require(`${REPO}/data/types.json`).types.map((t) => t.name);
 
 // ---------- dropdown lists (written to lists.json for sdt.py and the importer) ----------
-const MAP_TO_SHEET = { "United States of America": "United States", "Dem. Rep. Congo": "DR Congo", Turkey: "Turkiye" };
+const MAP_TO_SHEET = { "United States of America": "United States", "Dem. Rep. Congo": "DR Congo", Turkey: "Turkiye", Vietnam: "Viet Nam" };
 const SKIP = new Set(["Antarctica", "Fr. S. Antarctic Lands", "N. Cyprus", "Somaliland", "W. Sahara"]);
 const countries = new Set(world.countries.map((c) => MAP_TO_SHEET[c.name] || c.name).filter((n) => !SKIP.has(n)));
-incidents.forEach((i) => countries.add(i.location));
+incidents.forEach((i) => countries.add(MAP_TO_SHEET[i.location] || i.location));
 // Every incident needs a real location: no "Multiple / regional" or Caribbean option.
 // Gaza is its own location. The EU counts as a location and is mapped to Brussels.
 countries.delete("Caribbean");

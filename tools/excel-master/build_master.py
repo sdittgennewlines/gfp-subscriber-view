@@ -66,6 +66,8 @@ ENTITIES = [
 ]
 NAME = {k: n for k, n, _ in ENTITIES}
 SPOTLIGHT = {n for _, n, kind in ENTITIES if kind == "Country"}
+# The master's spelling where the old sheet differs (decided Nov 11: "Viet Nam").
+LOCATION_SPELLING = {"Vietnam": "Viet Nam"}
 NONE = "None"  # master-only "Counts toward" value: counts toward nothing (see Read Me)
 
 # Columns of the old sheet that the site doesn't read: second link and review comments.
@@ -253,7 +255,7 @@ rows = sorted(incidents, key=lambda i: (i["date"], i["title"]))
 seen_extra = defaultdict(int)
 counts_none = 0
 for r, inc in enumerate(rows, 2):
-    loc = inc["location"]
+    loc = LOCATION_SPELLING.get(inc["location"], inc["location"])
     lines = [(NAME[k], v) for k, v in inc["scores"].items()]
     if not lines and loc in SPOTLIGHT:
         # Old rule: no ticked boxes = counts toward nothing. New rule would count it toward its
