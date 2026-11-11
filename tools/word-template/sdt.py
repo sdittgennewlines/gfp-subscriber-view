@@ -1,7 +1,7 @@
 """
 sdt.py: turns the §§key§§ markers in layout.docx into real Word content controls.
 
-Each control gets a w:tag equal to its key (e.g. "severity#3"), which is what the
+Each control gets a w:tag equal to its key (e.g. "gsi#3"), which is what the
 import page reads, so labels and layout can change without breaking the import.
 
 usage: python3 sdt.py layout.docx out.docx
@@ -17,15 +17,15 @@ FIELDS = {
     "week_ending": ("date", None, "Pick the Friday", "Week ending"),
     "title": ("text", None, "Type the title", "Title"),
     "date": ("date", None, "Pick the date", "Date"),
-    "country": ("drop", "country", "Choose a country", "Country"),
-    "place": ("text", None, "Optional", "Place detail"),
+    "country": ("drop", "country", "Choose a location", "Location"),
+    "place": ("text", None, "Optional", "Place Detail"),
     "type": ("drop", "type", "Choose a type", "Type"),
     "type2": ("drop", "type2", "Optional", "Secondary type"),
     "gsi": ("drop", "gsi", "Choose a score", "Headline GSI"),
     "summary": ("multiline", None, "Write the summary", "Summary"),
     "link": ("text", None, "Paste the link", "Source link"),
     "link2": ("text", None, "Optional", "Additional source"),
-    "featured": ("drop", "featured", "No", "Featured"),
+    "featured": ("drop", "featured", "Leave blank or choose", "Key Incident?"),
     "related": ("text", None, "Optional", "Related New Lines link"),
 }
 for i in range(1, 6):
@@ -45,7 +45,6 @@ EXAMPLE = {
     "entity3": "Global Energy", "score3": "−10",
     "summary": "Indonesia reduced pipeline natural gas exports to Singapore by 31 million standard cubic feet per day, approximately 8% of its pipeline supply to the country, citing maintenance shutdowns and increased domestic demand. Following concerns raised by Singapore’s prime minister, Indonesian Energy Minister Bahilil Lahadalia said the reduction remained within minimum contractual supply requirements.",
     "link": "https://www.reuters.com/business/energy/indonesia-meeting-gas-deal-terms-with-singapore-despite-supply-cut-minister-says-2026-10-26/",
-    "featured": "No",
 }
 
 RPR = '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/><w:sz w:val="20"/></w:rPr>'

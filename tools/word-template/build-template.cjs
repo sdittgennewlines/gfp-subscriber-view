@@ -21,7 +21,7 @@ const countries = new Set(world.countries.map((c) => MAP_TO_SHEET[c.name] || c.n
 incidents.forEach((i) => countries.add(i.location));
 ["Caribbean", "Gaza"].forEach((x) => countries.delete(x)); // places, not countries: use Place detail
 ["Singapore", "Bahrain", "EU"].forEach((x) => countries.add(x));
-const countryList = ["Multiple / regional (see Place detail)", ...[...countries].sort((a, b) => a.localeCompare(b))];
+const countryList = ["Multiple / regional (see Place Detail)", ...[...countries].sort((a, b) => a.localeCompare(b))];
 
 const entities = [
   "United States", "China", "Iran", "Venezuela", "India", "Brazil", "Canada", "DR Congo", "Ethiopia", "France", "Germany",
@@ -84,51 +84,25 @@ function incidentBlock(n) {
   const rows = [
     row("Title", [marker(k("title"))], { required: true }),
     row("Date", [marker(k("date"))], { required: true, hint: "When it happened" }),
-    row("Country", [marker(k("country")), sep(), tag("Place detail "), marker(k("place"))], { required: true, hint: "Place detail is optional: a city, region or body (Gaza, EU…)" }),
+    row("Location", [marker(k("country")), sep(), tag("Place Detail "), marker(k("place"))], { required: true, hint: "Place Detail can be a more specific location, such as a city." }),
     row("Type", [marker(k("type")), sep(), tag("Secondary type "), marker(k("type2"))], { required: true }),
-    row("Headline GSI", [marker(k("gsi"))], { required: true, hint: "Overall score. Its sign and size set the wording and severity." })
+    row("Headline GSI", [marker(k("gsi"))], { required: true, hint: "Overall GSI score" })
   ];
   for (let i = 1; i <= 5; i++) {
     rows.push(row(i === 1 ? "Counts toward" : "", [marker(k(`entity${i}`)), sep(), tag("Score "), marker(k(`score${i}`))],
-      i === 1 ? { hint: "Each spotlight country, region or theme it moves, with its score. Leave unused lines empty." } : {}));
+      i === 1 ? { hint: "Each country, region, or theme whose GSI is affected. Leave unused lines empty." } : {}));
   }
   rows.push(
-    row("Summary", [marker(k("summary"))], { required: true, hint: "2–4 sentences" }),
+    row("Summary", [marker(k("summary"))], { required: true }),
     row("Source link", [marker(k("link"))], { required: true }),
     row("Additional source", [marker(k("link2"))]),
-    row("Featured", [marker(k("featured"))], { hint: "Key incident of the week?" }),
-    row("Related New Lines link", [marker(k("related"))], { hint: "e.g. Mass Atrocities Monitor entry", last: true })
+    row("Key Incident?", [marker(k("featured"))], { hint: "Student Fellows leave blank" }),
+    row("Related New Lines link", [marker(k("related"))], { hint: "Forecast, NL portfolio work, portfolio monitor entry, etc.", last: true })
   );
   return [
-    new Paragraph({
-      heading: HeadingLevel.HEADING_2,
-      keepNext: true,
-      children: [new TextRun({ text: n === 0 ? "Example incident" : `Incident ${n}`, font: SERIF, size: 26, bold: true, color: INK })]
-    }),
     new Table({ width: { size: W, type: WidthType.DXA }, columnWidths: [LABEL_W, VALUE_W], rows }),
-    new Paragraph({ spacing: { after: 200 }, children: [] })
+    new Paragraph({ spacing: { after: 360 }, children: [] })
   ];
-}
-
-/** The level → wording rules, shown in the instructions. */
-function wordingTable() {
-  const widths = [2600, 3380, 3380];
-  const cell = (text, w, { head = false } = {}) => new TableCell({
-    width: { size: w, type: WidthType.DXA }, borders,
-    shading: head ? { fill: LABELBG, type: ShadingType.CLEAR, color: "auto" } : undefined,
-    margins: { top: 60, bottom: 60, left: 120, right: 120 },
-    children: [new Paragraph({ children: [new TextRun({ text, font: FONT, size: 18, bold: head, color: INK })] })]
-  });
-  const r = (cells, head) => new TableRow({ children: cells.map((t, i) => cell(t, widths[i], { head })) });
-  return new Table({
-    width: { size: W, type: WidthType.DXA }, columnWidths: widths,
-    rows: [
-      r(["If the incident counts toward…", "Negative score", "Positive score"], true),
-      r(["One country only (country level)", "Destabilization", "Stabilization"]),
-      r(["A region, or two or more countries (international)", "Escalation", "De-escalation"]),
-      r(["A global theme: energy or climate (global)", "Disruption", "Enhancement"])
-    ]
-  });
 }
 
 // ---------- the document ----------
@@ -137,7 +111,7 @@ const steps = (text) => new Paragraph({ numbering: { reference: "steps", level: 
 
 const doc = new Document({
   creator: "New Lines Institute",
-  title: "GFP weekly incident report",
+  title: "GFP Weekly Incidents",
   styles: {
     default: { document: { run: { font: FONT, size: 20 } } },
     paragraphStyles: [
@@ -156,13 +130,13 @@ const doc = new Document({
     properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
     footers: {
       default: new Footer({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: W }], children: [
-        new TextRun({ text: "New Lines Institute · Geopolitical Forecasting and Analysis Unit · Weekly incident report", font: FONT, size: 15, color: MUTED }),
+        new TextRun({ text: "New Lines Institute · Geopolitical Forecasting and Analysis Unit · Weekly Incidents", font: FONT, size: 15, color: MUTED }),
         new TextRun({ text: "\tPage ", font: FONT, size: 15, color: MUTED }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 15, color: MUTED })
       ] })] })
     },
     children: [
       new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: "NEW LINES INSTITUTE · GEOPOLITICAL FORECASTING AND ANALYSIS UNIT", font: FONT, size: 16, bold: true, color: "7A6528", characterSpacing: 20 })] }),
-      new Paragraph({ style: "Title", children: [new TextRun("Weekly incident report")] }),
+      new Paragraph({ style: "Title", children: [new TextRun("Weekly Incidents")] }),
       new Paragraph({
         spacing: { after: 240 },
         border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: INK, space: 6 } },
@@ -170,26 +144,14 @@ const doc = new Document({
       }),
 
       new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("How to fill this in")] }),
-      steps("Add each incident as its own block. To add a block, copy a whole empty block (heading and table) and paste it at the end. Don't type incidents outside the blocks."),
+      steps("Add each incident as its own table. To add one, copy a whole empty table and paste it at the end. Don't type incidents outside the tables."),
       steps("Fill the grey boxes. Most are dropdowns: click and choose. Fields marked * are required."),
-      steps("Choose the headline GSI and the Counts toward lines carefully: the incident's wording (escalation, destabilization…) and severity are worked out from them, so there is nothing else to classify."),
-      steps("Under Counts toward, list each spotlight country, region or theme the incident moves, with its score. Most incidents count toward one or two. Leave the other lines empty."),
       steps("Editorial edits this document as usual. When it is final, accept all tracked changes. The import page refuses a document that still has open changes."),
-      steps("The import page reads the blocks, shows them for review, and adds them to the Excel master. Nothing is retyped."),
-      new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Scores")] }),
-      bullet("Scores run from −90 (sharp destabilization) to +90 (sharp stabilization), in steps of 20; 0 means no change."),
-      bullet("Headline GSI is the incident's overall score. Each Counts toward line is its score for that country, region or theme, which can differ."),
-      bullet("Spotlight countries: United States, China, Iran, Venezuela, India, Brazil, Canada, DR Congo, Ethiopia, France, Germany, Cuba, Indonesia, Mexico, Myanmar, Sudan, Taiwan."),
-      bullet("Regions: Indo-Pacific, Middle East & North Africa, NATO (all of Europe plus Ukraine, Belarus and Russia), US/Americas. Global themes: Global Energy, Global Climate."),
-      new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun("Worked out for you")] }),
-      p("There are no Scope, Scenario or Severity fields. They follow from the scores:"),
-      wordingTable(),
-      new Paragraph({ spacing: { before: 120 }, children: [new TextRun({ text: "Severity comes from the size of the headline GSI: ±10 Low, ±30 Low/Medium, ±50 Medium, ±70 Medium/High, ±90 High. A score of 0 is the status quo.", font: FONT, size: 20, color: INK })] }),
+      steps("The import page reads the tables, shows them for review, and adds them to the Excel master. Nothing is retyped."),
 
       new Paragraph({ children: [new PageBreak()] }),
-      new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("Example (filled in)")] }),
-      p("A real incident, entered the way the import page expects. Delete this block before sending the document to Editorial.", { run: { italics: true, color: MUTED } }),
-      p("It counts toward a global theme (Global Energy), so it is global level and, with a headline GSI of −30, the platform will call it a low/medium disruption.", { run: { color: MUTED } }),
+      new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun("Filled In Example")] }),
+      p("A real incident, entered the way the import page expects. Delete this page before sending the document to Editorial.", { run: { italics: true, color: MUTED } }),
       ...incidentBlock(0),
 
       new Paragraph({ children: [new PageBreak()] }),
